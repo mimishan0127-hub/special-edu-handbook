@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>幼兒特教巡輔手帳</title>
   
-  <!-- 1. Android 原生支援：靜態向量圖示（極致清晰、即時抓取） -->
+  <!-- 1. Android 原生支援：靜態向量圖示 -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><defs><linearGradient id=%22bg%22 x1=%220%25%22 y1=%220%25%22 x2=%22100%25%22 y2=%22100%25%22><stop offset=%220%25%22 stop-color=%22%230F766E%22/><stop offset=%22100%25%22 stop-color=%22%23115E59%22/></linearGradient></defs><rect width=%22100%22 height=%22100%22 rx=%2226%22 fill=%22url(%23bg)%22/><circle cx=%2250%22 cy=%2250%22 r=%2232%22 fill=%22%23FFFFFF%22 opacity=%220.15%22/><text y=%2266%22 x=%2244%22 font-size=%2248%22 text-anchor=%22middle%22>🌱</text><text y=%2240%22 x=%2268%22 font-size=%2224%22 text-anchor=%22middle%22>✨</text></svg>">
 
-  <!-- 2. Android 專屬 PWA 獨立 App 宣告（去除右下角 Chrome 徽章、全螢幕運作） -->
+  <!-- 2. Android 專屬 PWA 獨立 App 宣告 -->
   <meta name="theme-color" content="#0F766E">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="特教手帳">
@@ -98,7 +98,6 @@
       transform-origin: bottom left;
     }
 
-    /* 強制隱藏 Netlify 注入的浮水印標籤 */
     body > :not(#app):not(script):not(style) {
       display: none !important;
       visibility: hidden !important;
@@ -187,7 +186,8 @@
                 <span v-if="autoSaveTimeText" class="text-[11px] text-teal-800 font-bold bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
                   {{ autoSaveTimeText }}
                 </span>
-                <button @click="insertBatchTemplate" class="text-xs text-teal-700 font-bold hover:underline flex items-center">
+                <!-- 優化 3：正在輸入時隱藏「帶入範本」，避免誤按覆蓋已打文字 -->
+                <button v-if="!batchInputText.trim()" @click="insertBatchTemplate" class="text-xs text-teal-700 font-bold hover:underline flex items-center">
                   🪄 帶入範本
                 </button>
               </div>
@@ -273,7 +273,7 @@
             <div class="bg-slate-50/80 rounded-xl p-3 border border-slate-200 text-xs space-y-2">
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold text-teal-800 tracking-wider flex items-center gap-1">
-                  <span>✨</span> 特教通報客觀紀錄
+                  <span>✨</span> {{ item.refined_record ? '特教通報客觀紀錄' : '老師觀察草稿（待潤飾）' }}
                 </span>
                 <button @click="toggleEditMode(item)" class="text-xs font-bold text-indigo-700 hover:underline">
                   {{ item.isEditingRefined ? '取消' : '✏️ 校正事實文字' }}
@@ -289,9 +289,9 @@
 
               <div v-else>
                 <pre v-if="item.refined_record" class="whitespace-pre-wrap text-slate-800 font-sans leading-relaxed font-medium">{{ item.refined_record }}</pre>
-                <div v-else class="text-slate-600 italic py-1">
-                  <span class="inline-block text-[10px] text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-bold mb-1">草稿待潤飾</span>
-                  <p class="font-normal">{{ item.original_record }}</p>
+                <div v-else class="text-slate-700 py-1">
+                  <span class="inline-block text-[10px] text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-bold mb-1">未潤飾草稿</span>
+                  <pre class="whitespace-pre-wrap text-slate-800 font-sans leading-relaxed font-medium">{{ item.original_record }}</pre>
                 </div>
               </div>
             </div>
@@ -309,8 +309,8 @@
               <pre class="whitespace-pre-wrap text-slate-800 font-sans leading-relaxed font-medium">{{ item.advice_record }}</pre>
             </div>
 
-            <!-- 保留原始速記折疊抽屜 -->
-            <div v-if="item.original_record" class="border border-slate-200/80 rounded-xl bg-slate-50/50 p-2.5 text-xs">
+            <!-- 保留原始速記折疊抽屜（僅在已潤飾且存在原稿時呈現對照） -->
+            <div v-if="item.refined_record && item.original_record" class="border border-slate-200/80 rounded-xl bg-slate-50/50 p-2.5 text-xs">
               <button @click="item.showOriginal = !item.showOriginal" class="w-full flex justify-between items-center text-slate-600 font-bold hover:text-slate-900 transition">
                 <span class="flex items-center gap-1">
                   <span>📄</span> 查看老師原始輸入速記
@@ -333,8 +333,9 @@
                 </button>
               </div>
 
+              <!-- 優化 1：無論是否潤飾過，重潤均採用當前校正完的最新事實為基準 -->
               <button @click="reRunSingleAi(item)" :disabled="isAiProcessing" class="text-xs text-teal-700 hover:text-teal-900 font-bold flex items-center space-x-1">
-                <span>↺</span> <span>重潤客觀紀錄</span>
+                <span>↺</span> <span>{{ item.refined_record ? '重潤客觀紀錄' : '開始潤飾此草稿' }}</span>
               </button>
             </div>
 
@@ -342,7 +343,7 @@
         </div>
       </section>
 
-      <!-- ================= 頁籤 3：搜尋檢索 (支援姓名 + 日期檢索) ================= -->
+      <!-- ================= 頁籤 3：搜尋檢索 (支援姓名 + 日期檢索 + 現場校正) ================= -->
       <section v-show="activeTab === 'search'" class="space-y-3">
         <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-soft space-y-2.5">
           <div class="relative">
@@ -375,6 +376,7 @@
           <p class="text-xs font-bold text-slate-700">查無符合條件的觀察紀錄</p>
         </div>
 
+        <!-- 檢索列表：支援現場直接校正 -->
         <div v-else class="space-y-2.5">
           <div v-for="item in searchedRecords" :key="item.id" class="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2 shadow-soft">
             <div class="flex justify-between items-center pb-1.5 border-b border-slate-100">
@@ -382,11 +384,27 @@
                 <span class="text-xs font-extrabold text-slate-900">🧸 {{ item.student_name }}</span>
                 <span class="text-[11px] text-slate-500">📅 {{ item.observation_date }}</span>
               </div>
-              <button @click="copyToClipboard(getUnifiedRecord(item))" class="text-xs text-teal-700 font-bold hover:underline">
-                複製通報
+              <div class="flex items-center space-x-2">
+                <!-- 優化 2：翻紀錄區塊新增校正按鈕 -->
+                <button @click="toggleEditMode(item)" class="text-xs font-bold text-indigo-700 hover:underline">
+                  {{ item.isEditingRefined ? '取消' : '✏️ 校正' }}
+                </button>
+                <button @click="copyToClipboard(getUnifiedRecord(item))" class="text-xs text-teal-700 font-bold hover:underline">
+                  複製通報
+                </button>
+              </div>
+            </div>
+
+            <!-- 編輯模式 -->
+            <div v-if="item.isEditingRefined" class="space-y-2 pt-1">
+              <textarea v-model="item.editBuffer" rows="6" class="w-full text-xs p-2.5 rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed custom-scrollbar font-medium text-slate-800"></textarea>
+              <button @click="saveEditedRefined(item)" class="w-full py-1.5 text-xs bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-sm active:scale-95 transition">
+                ✓ 儲存校正
               </button>
             </div>
-            <pre class="text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed font-medium">{{ getUnifiedRecord(item) }}</pre>
+
+            <!-- 檢視模式 -->
+            <pre v-else class="text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed font-medium">{{ getUnifiedRecord(item) }}</pre>
           </div>
         </div>
       </section>
@@ -735,11 +753,18 @@
           }
         };
 
+        // 優化 1：若仍為未潤飾草稿，校正存檔直接更新 original_record（事實基底）
         const saveEditedRefined = async (item) => {
-          item.refined_record = item.editBuffer;
+          if (!item.refined_record) {
+            // 草稿狀態：存為最新原始速記基底
+            item.original_record = item.editBuffer;
+          } else {
+            // 已潤飾狀態：存為最新客觀紀錄
+            item.refined_record = item.editBuffer;
+          }
           item.isEditingRefined = false;
           await persistSmartRecord(item);
-          showToast('✓ 已儲存最新客觀紀錄！');
+          showToast('✓ 已儲存最新事實文字！');
         };
 
         const downloadCsvFile = (dataRows, filename) => {
@@ -832,9 +857,31 @@
           return uniqueResults;
         };
 
+        // 優化 4：提取老師歷史修改範例，進行少樣本少學習（Few-shot Learning）
+        const extractTeacherFewShotExamples = () => {
+          const validHistory = records.value.filter(r => 
+            r.original_record && 
+            r.refined_record && 
+            r.original_record.trim().length > 10 && 
+            r.refined_record.trim().length > 15 &&
+            r.original_record !== r.refined_record
+          );
+
+          if (validHistory.length === 0) return '';
+
+          // 取最近確認校正過的 1~2 筆範本
+          const samples = validHistory.slice(0, 2);
+          let promptSegment = '\n【老師個人標準筆觸與校正示範】（請嚴格參考這位老師的偏好修法、客觀動詞與句子精煉度）：\n';
+          samples.forEach((s, i) => {
+            promptSegment += `\n[示範例 ${i + 1}]\n老師原始速記：\n${s.original_record}\n老師最終認可寫法：\n${s.refined_record}\n`;
+          });
+          return promptSegment;
+        };
+
         const buildRefineOnlyPrompt = (studentName, rawNotes) => {
+          const teacherExamples = extractTeacherFewShotExamples();
           return {
-            system: "你是一位資深的幼兒特殊教育巡迴輔導專家。請務必使用「台灣繁體中文 (Traditional Chinese)」輸出。嚴格保留原始編號順序逐點潤飾，轉化口語贅字為具體客觀行為與所需成人支持介入程度。絕對禁止添加任何大標題，也絕對不可使用任何 Markdown 星號標籤（如 * 或 **），直接以乾淨純文字與阿拉伯數字條列輸出。",
+            system: `你是一位資深的幼兒特殊教育巡迴輔導專家。請務必使用「台灣繁體中文 (Traditional Chinese)」輸出。嚴格保留原始編號順序逐點潤飾，轉化口語贅字為具體客觀行為與所需成人支持介入程度。絕對禁止添加任何大標題，也絕對不可使用任何 Markdown 星號標籤（如 * 或 **），直接以乾淨純文字與阿拉伯數字條列輸出。${teacherExamples}`,
             user: `請將以下針對幼兒【${studentName}】的觀察紀錄保留原始編號順序逐點進行繁體中文客觀潤飾（嚴禁使用 * 號）：\n\n${rawNotes}`
           };
         };
@@ -1049,19 +1096,21 @@ ${confirmedRecord}
           }
         };
 
+        // 優化 1：若尚未潤飾，取用校正完的 original_record 作為潤飾輸入
         const reRunSingleAi = async (item) => {
           if (isAiProcessing.value) return;
           isAiProcessing.value = true;
-          activeStatusText.value = `【${item.student_name}】重新潤飾中...`;
+          activeStatusText.value = `【${item.student_name}】客觀行為潤飾中...`;
 
           try {
+            // 優先取用老師在草稿中最新校正的文字，若無則取既有客觀紀錄
             const sourceText = item.original_record || item.refined_record;
             const { system, user } = buildRefineOnlyPrompt(item.student_name, sourceText);
             const refined = await callGroqApiGeneral(system, user, item.student_name);
             item.refined_record = refined;
             item.editBuffer = refined;
             await persistSmartRecord(item);
-            showToast(`✓ 已更新【${item.student_name}】客觀紀錄！`);
+            showToast(`✓ 已成功潤飾【${item.student_name}】客觀紀錄！`);
           } catch (err) {
             alert('提示：' + err.message);
           } finally {
