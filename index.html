@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>幼兒特教巡輔手帳</title>
+  
+  <!-- 1. Android 原生支援：靜態向量圖示（極致清晰、即時抓取） -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><defs><linearGradient id=%22bg%22 x1=%220%25%22 y1=%220%25%22 x2=%22100%25%22 y2=%22100%25%22><stop offset=%220%25%22 stop-color=%22%230F766E%22/><stop offset=%22100%25%22 stop-color=%22%23115E59%22/></linearGradient></defs><rect width=%22100%22 height=%22100%22 rx=%2226%22 fill=%22url(%23bg)%22/><circle cx=%2250%22 cy=%2250%22 r=%2232%22 fill=%22%23FFFFFF%22 opacity=%220.15%22/><text y=%2266%22 x=%2244%22 font-size=%2248%22 text-anchor=%22middle%22>🌱</text><text y=%2240%22 x=%2268%22 font-size=%2224%22 text-anchor=%22middle%22>✨</text></svg>">
+
+  <!-- 2. Android 專屬 PWA 獨立 App 宣告（去除右下角 Chrome 徽章、全螢幕運作） -->
+  <meta name="theme-color" content="#0F766E">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="特教手帳">
+  <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%E5%B9%BC%E5%85%92%E7%89%B9%E6%95%99%E5%B7%A1%E8%BC%94%E6%89%8B%E5%B8%B3%22%2C%22short_name%22%3A%22%E7%89%B9%E6%95%99%E6%89%8B%E5%B8%B3%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230F766E%22%2C%22theme_color%22%3A%22%230F766E%22%7D">
+
+  <!-- 3. iPhone iOS Safari 專屬：高解析度 180x180 PNG 繪製 -->
+  <link rel="apple-touch-icon" id="apple-touch-icon" href="">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="特教手帳">
+
+  <script>
+    (function generateIosPngIcon() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 180;
+        canvas.height = 180;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#0F766E';
+        if (ctx.roundRect) {
+          ctx.roundRect(0, 0, 180, 180, 42);
+        } else {
+          ctx.rect(0, 0, 180, 180);
+        }
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.beginPath();
+        ctx.arc(90, 90, 56, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = '82px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🌱', 78, 100);
+
+        ctx.font = '38px -apple-system, sans-serif';
+        ctx.fillText('✨', 126, 56);
+
+        const pngUrl = canvas.toDataURL('image/png');
+        const appleIcon = document.getElementById('apple-touch-icon');
+        if (appleIcon) appleIcon.href = pngUrl;
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  </script>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- 繁體中文原生標準字體 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+      background-color: #F8FAFC;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+      -webkit-tap-highlight-color: transparent;
+    }
+    [v-cloak] { display: none; }
+    .pb-safe { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+    .shadow-soft { box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.04); }
+    .shadow-btn { box-shadow: 0 4px 0px #0F766E; }
+    .shadow-btn:active { transform: translateY(2px); box-shadow: 0 2px 0px #0F766E; }
+
+    @keyframes pencil-wiggle {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      20% { transform: rotate(-14deg) translateY(-2px); }
+      40% { transform: rotate(8deg) translateY(1px); }
+      60% { transform: rotate(-8deg) translateY(-1px); }
+      80% { transform: rotate(4deg) translateY(0); }
+    }
+    .animate-pencil {
+      display: inline-block;
+      animation: pencil-wiggle 2s ease-in-out infinite;
+      transform-origin: bottom left;
+    }
+
+    /* 強制隱藏 Netlify 注入的浮水印標籤 */
+    body > :not(#app):not(script):not(style) {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      opacity: 0 !important;
+      width: 0 !important;
+      height: 0 !important;
+      position: absolute !important;
+      left: -99999px !important;
+    }
+
+    [class*="netlify"],
+    [id*="netlify"],
+    [data-netlify],
+    iframe[src*="netlify"],
+    a[href*="netlify.com"],
+    netlify-drawer {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      opacity: 0 !important;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen bg-slate-100/70 overflow-x-hidden">
+  <div id="app" v-cloak class="w-full max-w-md mx-auto min-h-screen bg-[#FFFDF9] flex flex-col relative shadow-xl border-x border-slate-200/80 overflow-x-hidden">
+
+    <!-- 頂部手機標題列 -->
+    <header class="sticky top-0 z-30 bg-[#FFFDF9]/95 backdrop-blur-md border-b border-teal-100/80 px-4 py-3 flex items-center justify-between shrink-0">
+      <div class="flex items-center space-x-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-teal-700 to-teal-800 flex items-center justify-center text-white shadow-sm shrink-0 text-base">
+          🌱
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center space-x-1.5">
+            <h1 class="text-sm font-extrabold text-slate-900 tracking-tight truncate">特教巡輔小特助</h1>
+            <span class="px-1.5 py-0.5 text-[10px] font-bold bg-teal-50 text-teal-800 rounded-md border border-teal-200 shrink-0">
+              巡輔專用
+            </span>
+          </div>
+          <p class="text-[11px] text-teal-700 font-bold truncate">
+            核心：{{ currentModelShortName }} 
+            <span v-if="groqKey2" class="text-[10px] bg-teal-100 text-teal-800 px-1 py-0.2 rounded font-extrabold ml-1">雙金鑰加速</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2 shrink-0">
+        <button @click="fetchCloudRecords(true)" :disabled="isLoadingData" class="w-8 h-8 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 flex items-center justify-center border border-teal-200 active:scale-95 transition" title="重新整理雲端">
+          <svg class="w-4 h-4" :class="{ 'animate-spin': isLoadingData }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.03 8.03 0 01-15.357-2m15.357 2H15"></path></svg>
+        </button>
+        <span class="px-2 py-1 rounded-full text-[11px] font-bold flex items-center space-x-1" :class="storageMode === 'supabase' ? 'bg-teal-50 text-teal-800 border border-teal-300' : 'bg-slate-100 text-slate-600 border border-slate-300'">
+          <span class="w-2 h-2 rounded-full" :class="storageMode === 'supabase' ? 'bg-teal-600 animate-pulse' : 'bg-slate-400'"></span>
+          <span>{{ storageMode === 'supabase' ? '雲端同步' : '本機模式' }}</span>
+        </span>
+      </div>
+    </header>
+
+    <!-- 主體內容分頁切換區 -->
+    <main class="flex-1 p-3.5 pb-safe overflow-y-auto custom-scrollbar">
+
+      <!-- ================= 頁籤 1：隨手登打 ================= -->
+      <section v-show="activeTab === 'input'" class="space-y-3.5">
+        <div class="bg-teal-50/80 py-2.5 px-3.5 rounded-2xl border border-teal-200 flex items-center space-x-2.5 shadow-sm">
+          <span class="text-xl animate-pencil shrink-0 leading-none">✏️</span>
+          <p class="text-xs text-teal-950 font-bold tracking-wide">
+            貼上速記，自動依姓名分案潤飾 ✨
+          </p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-soft space-y-3.5">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <span>📅</span>
+              觀察日期
+            </label>
+            <input v-model="batchDate" type="date" class="text-xs px-2.5 py-1.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-teal-600">
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label class="text-xs font-bold text-slate-800 flex items-center space-x-1">
+                <span>📝 幼兒觀察速記</span>
+              </label>
+              <div class="flex items-center space-x-2">
+                <span v-if="autoSaveTimeText" class="text-[11px] text-teal-800 font-bold bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                  {{ autoSaveTimeText }}
+                </span>
+                <button @click="insertBatchTemplate" class="text-xs text-teal-700 font-bold hover:underline flex items-center">
+                  🪄 帶入範本
+                </button>
+              </div>
+            </div>
+
+            <textarea v-model="batchInputText" @input="handleManualInput" rows="11" placeholder="可直接在此連續貼上小朋友的觀察紀錄，例如：
+晨熙
+1. 踢足球 能輕踢控制 踩球停 瞄準踢進球門
+2. 學習區 拼複雜圖案拼圖 想要尋求協助
+
+小宇
+1. 團討時間容易離開座位，需老師輕拍肩膀提醒
+2. 吃點心時會伸手拿旁邊同學的餅乾" class="w-full text-xs p-3 rounded-xl border-2 border-slate-200 focus:outline-none focus:border-teal-600 bg-[#FCFBF8] leading-relaxed custom-scrollbar text-slate-800 font-medium"></textarea>
+
+            <div class="flex items-center mt-1 text-[11px] text-slate-500 px-0.5">
+              <span>✓ 輸入時自動即時儲存至本機，潤飾後原稿永久保留</span>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-1">
+            <button @click="handleBatchRefine" :disabled="isAiProcessing" class="w-full py-3.5 rounded-xl text-white font-extrabold text-sm bg-teal-700 hover:bg-teal-800 shadow-btn active:scale-[0.99] transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:shadow-none">
+              <span v-if="!isAiProcessing">🚀</span>
+              <svg v-else class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+              <span>{{ isAiProcessing ? activeStatusText : '開始逐點客觀潤飾 (繁體中文)' }}</span>
+            </button>
+
+            <button @click="handleSaveBatchDraftsOnly" class="w-full py-2.5 rounded-xl text-slate-700 font-bold text-xs bg-slate-100 hover:bg-slate-200 active:scale-95 transition text-center border border-slate-200">
+              僅先建立未潤飾草稿
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 頁籤 2：小朋友檔案 (自動置頂最新 + 完整留存原稿) ================= -->
+      <section v-show="activeTab === 'students'" class="space-y-3.5">
+        <div class="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-soft flex items-center gap-2.5">
+          <div class="relative flex-1 min-w-0">
+            <label class="block text-[10px] font-bold text-slate-400 mb-0.5">選擇幼兒檔案</label>
+            <div class="relative">
+              <select v-model="selectedStudentFilter" class="w-full text-xs font-bold text-slate-800 bg-teal-50/30 border border-teal-200 rounded-xl px-3 py-2 appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500 pr-8">
+                <option v-for="name in uniqueStudentNames" :key="name" :value="name">
+                  🧸 {{ name }} (共 {{ getStudentCount(name) }} 筆紀錄)
+                </option>
+              </select>
+              <div class="absolute inset-y-0 right-0 flex items-center px-2.5 pointer-events-none text-slate-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+          </div>
+
+          <button v-if="records.length > 0" @click="exportCurrentViewCsv" class="px-3 py-2.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-xl shrink-0 flex items-center space-x-1 transition shadow-sm mt-3" title="匯出 Excel / 試算表">
+            <span>📊 匯出試算表</span>
+          </button>
+        </div>
+
+        <div v-if="currentStudentRecords.length === 0" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500 space-y-1.5">
+          <span class="text-3xl block">📭</span>
+          <p class="text-xs font-bold text-slate-700">目前尚無此幼兒的觀察紀錄</p>
+        </div>
+
+        <div v-else class="space-y-3">
+          <div v-for="(item, idx) in currentStudentRecords" :key="item.id" class="bg-white rounded-2xl border border-slate-200 shadow-soft p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div class="flex items-center space-x-2">
+                <span class="w-6 h-6 rounded-full bg-teal-100 text-teal-800 font-extrabold text-xs flex items-center justify-center">
+                  {{ item.student_name.slice(0, 1) }}
+                </span>
+                <span class="text-sm font-extrabold text-slate-900">{{ item.student_name }}</span>
+                <span class="text-[11px] text-slate-500 font-medium">📅 {{ item.observation_date }}</span>
+                <span v-if="idx === 0" class="px-1.5 py-0.5 text-[9px] font-extrabold bg-teal-100 text-teal-800 rounded">最新紀錄</span>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <button @click="copyToClipboard(getUnifiedRecord(item))" class="px-2 py-1 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-lg transition flex items-center space-x-1">
+                  <span>📋 複製通報</span>
+                </button>
+                <button @click="deleteRecord(item.id)" class="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- 主區塊：特教客觀行為紀錄 -->
+            <div class="bg-slate-50/80 rounded-xl p-3 border border-slate-200 text-xs space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-teal-800 tracking-wider flex items-center gap-1">
+                  <span>✨</span> 特教通報客觀紀錄
+                </span>
+                <button @click="toggleEditMode(item)" class="text-xs font-bold text-indigo-700 hover:underline">
+                  {{ item.isEditingRefined ? '取消' : '✏️ 校正事實文字' }}
+                </button>
+              </div>
+
+              <div v-if="item.isEditingRefined" class="space-y-2 pt-1">
+                <textarea v-model="item.editBuffer" rows="8" class="w-full text-xs p-2.5 rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed custom-scrollbar font-medium text-slate-800"></textarea>
+                <button @click="saveEditedRefined(item)" class="w-full py-2 text-xs bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-sm active:scale-95 transition">
+                  ✓ 儲存校正為最新版
+                </button>
+              </div>
+
+              <div v-else>
+                <pre v-if="item.refined_record" class="whitespace-pre-wrap text-slate-800 font-sans leading-relaxed font-medium">{{ item.refined_record }}</pre>
+                <div v-else class="text-slate-600 italic py-1">
+                  <span class="inline-block text-[10px] text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-bold mb-1">草稿待潤飾</span>
+                  <p class="font-normal">{{ item.original_record }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 次區塊：給老師與家長建議 -->
+            <div v-if="item.advice_record" class="bg-amber-50/50 rounded-xl p-3 border border-amber-200/80 text-xs space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-amber-900 tracking-wider flex items-center gap-1">
+                  <span>💡</span> 班級與家庭實務建議
+                </span>
+                <button @click="item.advice_record = ''; persistSmartRecord(item);" class="text-[10px] text-rose-500 hover:underline">
+                  清除建議
+                </button>
+              </div>
+              <pre class="whitespace-pre-wrap text-slate-800 font-sans leading-relaxed font-medium">{{ item.advice_record }}</pre>
+            </div>
+
+            <!-- 保留原始速記折疊抽屜 -->
+            <div v-if="item.original_record" class="border border-slate-200/80 rounded-xl bg-slate-50/50 p-2.5 text-xs">
+              <button @click="item.showOriginal = !item.showOriginal" class="w-full flex justify-between items-center text-slate-600 font-bold hover:text-slate-900 transition">
+                <span class="flex items-center gap-1">
+                  <span>📄</span> 查看老師原始輸入速記
+                </span>
+                <span class="text-[11px]">{{ item.showOriginal ? '收起 ▲' : '展開 ▼' }}</span>
+              </button>
+              <div v-show="item.showOriginal" class="pt-2 mt-2 border-t border-slate-200 text-slate-700 font-normal leading-relaxed whitespace-pre-wrap">
+                {{ item.original_record }}
+              </div>
+            </div>
+
+            <!-- 按鈕區 -->
+            <div class="flex items-center justify-between pt-1 text-xs">
+              <div>
+                <button v-if="item.refined_record && !item.advice_record" @click="generateAdviceForStudent(item)" :disabled="isAiProcessing" class="px-2.5 py-1 text-xs font-bold text-teal-900 bg-teal-100 hover:bg-teal-200 border border-teal-300 rounded-lg shadow-sm transition flex items-center space-x-1">
+                  <span>💡</span> <span>生成導師與家庭建議</span>
+                </button>
+                <button v-else-if="item.advice_record" @click="generateAdviceForStudent(item)" :disabled="isAiProcessing" class="text-[11px] text-teal-700 hover:underline font-bold">
+                  ↺ 重新生成建議
+                </button>
+              </div>
+
+              <button @click="reRunSingleAi(item)" :disabled="isAiProcessing" class="text-xs text-teal-700 hover:text-teal-900 font-bold flex items-center space-x-1">
+                <span>↺</span> <span>重潤客觀紀錄</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 頁籤 3：搜尋檢索 (支援姓名 + 日期檢索) ================= -->
+      <section v-show="activeTab === 'search'" class="space-y-3">
+        <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-soft space-y-2.5">
+          <div class="relative">
+            <input v-model.trim="searchKeyword" type="text" placeholder="輸入小朋友名字搜尋..." class="w-full text-xs pl-8 pr-8 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 bg-slate-50 font-medium text-slate-800">
+            <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <button v-if="searchKeyword" @click="searchKeyword = ''" class="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600">✕</button>
+          </div>
+
+          <div class="flex items-center gap-2 pt-0.5">
+            <div class="flex-1 flex items-center bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1">
+              <span class="text-xs mr-1 text-slate-500">📅</span>
+              <input v-model="searchDate" type="date" class="text-xs bg-transparent border-0 font-bold text-slate-800 focus:outline-none w-full">
+            </div>
+            <button v-if="searchDate" @click="searchDate = ''" class="px-2.5 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition border border-slate-200 shrink-0">
+              清除日期
+            </button>
+            <button @click="exportAllSearchCsv" :disabled="searchedRecords.length === 0" class="px-3 py-1.5 text-xs font-bold text-teal-900 bg-teal-100 hover:bg-teal-200 border border-teal-300 rounded-xl shrink-0 transition">
+              匯出清單
+            </button>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center text-[11px] text-slate-500 px-1 font-semibold">
+          <span>找到 {{ searchedRecords.length }} 筆符合紀錄</span>
+          <span v-if="searchDate">篩選日期：{{ searchDate }}</span>
+        </div>
+
+        <div v-if="searchedRecords.length === 0" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500 space-y-1.5">
+          <span class="text-3xl block">🔍</span>
+          <p class="text-xs font-bold text-slate-700">查無符合條件的觀察紀錄</p>
+        </div>
+
+        <div v-else class="space-y-2.5">
+          <div v-for="item in searchedRecords" :key="item.id" class="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2 shadow-soft">
+            <div class="flex justify-between items-center pb-1.5 border-b border-slate-100">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-xs font-extrabold text-slate-900">🧸 {{ item.student_name }}</span>
+                <span class="text-[11px] text-slate-500">📅 {{ item.observation_date }}</span>
+              </div>
+              <button @click="copyToClipboard(getUnifiedRecord(item))" class="text-xs text-teal-700 font-bold hover:underline">
+                複製通報
+              </button>
+            </div>
+            <pre class="text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed font-medium">{{ getUnifiedRecord(item) }}</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 頁籤 4：系統設定 ================= -->
+      <section v-show="activeTab === 'settings'" class="space-y-3.5">
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-soft space-y-3.5">
+          <h2 class="text-xs font-extrabold text-slate-900 pb-2 border-b border-slate-100 flex items-center gap-1.5">
+            <span>⚙️</span> 系統與金鑰設定
+          </h2>
+
+          <div class="p-3.5 bg-teal-50/60 rounded-xl space-y-2.5 border border-teal-200">
+            <div class="flex justify-between items-center">
+              <label class="text-xs font-bold text-teal-950">主要 Groq API Key (帳號一)</label>
+              <button @click="testAndFetchGroqModels" :disabled="isDetectingGroq" class="text-[11px] text-teal-700 font-bold underline">
+                {{ isDetectingGroq ? '更新中...' : '🔍 更新可用模型' }}
+              </button>
+            </div>
+            <input v-model.trim="groqKey" type="password" placeholder="gsk_帳號一金鑰..." class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 bg-white font-mono text-slate-800">
+
+            <div>
+              <div class="flex justify-between items-center mb-0.5">
+                <label class="text-[11px] font-bold text-teal-900">第二把 Groq API Key (帳號二，選填)</label>
+                <span class="text-[9px] bg-teal-200/80 text-teal-900 px-1.5 py-0.2 rounded font-bold">雙帳號額度翻倍</span>
+              </div>
+              <input v-model.trim="groqKey2" type="password" placeholder="gsk_不同Email帳號的第二把金鑰（選填）..." class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 bg-white font-mono text-slate-800">
+              <p class="text-[10px] text-teal-800 font-medium mt-1">
+                💡 填入不同帳號的第二把 Key，系統會自動輪流調用；若一把冷卻中，另一把自動無縫接手！
+              </p>
+            </div>
+
+            <div class="pt-1">
+              <label class="block text-[11px] font-bold text-teal-900 mb-1">選用聰明模型 (建議首選 120b)</label>
+              <select v-model="groqModel" class="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600">
+                <option v-for="m in filteredGroqModels" :key="m" :value="m">{{ m }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="p-3.5 bg-slate-50 rounded-xl space-y-2 border border-slate-200">
+            <h3 class="text-xs font-bold text-slate-900 flex justify-between items-center">
+              <span>☁️ Supabase 跨裝置同步</span>
+              <span v-if="storageMode === 'supabase'" class="text-[11px] text-teal-800 font-bold">✓ 雲端已加密連線</span>
+            </h3>
+            <input v-model.trim="supabaseUrl" type="text" placeholder="https://xxxxxxxx.supabase.co" class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 bg-white font-mono text-slate-800">
+            <input v-model.trim="supabaseKey" type="password" placeholder="Supabase Anon Key (eyJhbGci...)" class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 bg-white font-mono text-slate-800">
+          </div>
+
+          <div class="pt-1">
+            <button @click="saveAndTestSettings" :disabled="isTestingConnection" class="w-full py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold active:scale-95 transition">
+              儲存設定並同步雲端
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 底部等寬導航欄 -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 px-1 py-1 z-40 grid grid-cols-4 items-center">
+      <button @click="activeTab = 'input'" class="flex flex-col items-center justify-center py-1.5 transition rounded-xl" :class="activeTab === 'input' ? 'text-teal-800 font-extrabold bg-teal-50/80' : 'text-slate-500 font-medium'">
+        <span class="text-base leading-none">🌱</span>
+        <span class="text-[11px] mt-1">隨手記</span>
+      </button>
+
+      <button @click="activeTab = 'students'" class="flex flex-col items-center justify-center py-1.5 transition rounded-xl" :class="activeTab === 'students' ? 'text-teal-800 font-extrabold bg-teal-50/80' : 'text-slate-500 font-medium'">
+        <span class="text-base leading-none">🧸</span>
+        <span class="text-[11px] mt-1">小朋友</span>
+      </button>
+
+      <button @click="activeTab = 'search'" class="flex flex-col items-center justify-center py-1.5 transition rounded-xl" :class="activeTab === 'search' ? 'text-teal-800 font-extrabold bg-teal-50/80' : 'text-slate-500 font-medium'">
+        <span class="text-base leading-none">🔍</span>
+        <span class="text-[11px] mt-1">翻紀錄</span>
+      </button>
+
+      <button @click="activeTab = 'settings'" class="flex flex-col items-center justify-center py-1.5 transition rounded-xl" :class="activeTab === 'settings' ? 'text-teal-800 font-extrabold bg-teal-50/80' : 'text-slate-500 font-medium'">
+        <span class="text-base leading-none">⚙️</span>
+        <span class="text-[11px] mt-1">小齒輪</span>
+      </button>
+    </nav>
+
+    <!-- 浮動提示 Toast -->
+    <div v-if="toastMessage" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs px-4 py-2 rounded-full shadow-lg transition font-bold flex items-center space-x-1 whitespace-nowrap">
+      <span>🍬</span>
+      <span>{{ toastMessage }}</span>
+    </div>
+
+  </div>
+
+  <!-- 強制移除 Netlify 浮水印腳本 -->
+  <script>
+    (function killNetlifyBadgeImmediately() {
+      const purge = () => {
+        document.body.querySelectorAll(':scope > :not(#app):not(script):not(style)').forEach(el => el.remove());
+        const elements = document.querySelectorAll('[class*="netlify"], [id*="netlify"], a[href*="netlify.com"], iframe[src*="netlify"], netlify-drawer');
+        elements.forEach(el => el.remove());
+
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        const toDelete = [];
+        while (walker.nextNode()) {
+          if (walker.currentNode.nodeValue && walker.currentNode.nodeValue.includes('Powered by Netlify')) {
+            let p = walker.currentNode.parentElement;
+            while (p && p.parentElement && p.parentElement !== document.body && p.parentElement.id !== 'app') {
+              p = p.parentElement;
+            }
+            if (p && p.id !== 'app') toDelete.push(p);
+          }
+        }
+        toDelete.forEach(el => el.remove());
+      };
+
+      purge();
+      window.addEventListener('DOMContentLoaded', purge);
+      window.addEventListener('load', purge);
+      const observer = new MutationObserver(purge);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    })();
+  </script>
+
+  <!-- Vue 3 核心邏輯 -->
+  <script>
+    const { createApp, ref, computed, watch, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const activeTab = ref('input');
+        const records = ref([]);
+        const searchKeyword = ref('');
+        const searchDate = ref('');
+        const selectedStudentFilter = ref('');
+        const isAiProcessing = ref(false);
+        const isTestingConnection = ref(false);
+        const isDetectingGroq = ref(false);
+        const isLoadingData = ref(false);
+        const toastMessage = ref('');
+        const activeStatusText = ref('');
+        const autoSaveTimeText = ref('');
+
+        const groqKey = ref(localStorage.getItem('groq_api_key') || '');
+        const groqKey2 = ref(localStorage.getItem('groq_api_key_2') || '');
+        const keyUsageToggle = ref(false);
+
+        const groqModel = ref(localStorage.getItem('groq_model_name') || 'openai/gpt-oss-120b');
+        const rawGroqModels = ref(JSON.parse(localStorage.getItem('groq_models_list') || '["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]'));
+
+        const supabaseUrl = ref(localStorage.getItem('supabase_url') || '');
+        const supabaseKey = ref(localStorage.getItem('supabase_key') || '');
+        const storageMode = ref('local');
+
+        let supabaseClient = null;
+
+        const batchDate = ref(new Date().toISOString().split('T')[0]);
+        const batchInputText = ref(localStorage.getItem('auto_draft_input_text') || '');
+
+        const showToast = (msg) => {
+          toastMessage.value = msg;
+          setTimeout(() => { toastMessage.value = ''; }, 3000);
+        };
+
+        const filteredGroqModels = computed(() => {
+          const list = rawGroqModels.value;
+          return list.filter(id => {
+            const lower = id.toLowerCase();
+            if (lower.includes('orpheus') || lower.includes('audio') || lower.includes('whisper')) return false;
+            if (lower.includes('allam')) return false;
+            if (lower.includes('guard') || lower.includes('safeguard')) return false;
+            return true;
+          });
+        });
+
+        const currentModelShortName = computed(() => {
+          return groqModel.value.split('/').pop();
+        });
+
+        const sortRecordsByDateDesc = (items) => {
+          return items.sort((a, b) => {
+            const dateA = a.observation_date || '';
+            const dateB = b.observation_date || '';
+            if (dateA !== dateB) {
+              return dateB.localeCompare(dateA);
+            }
+            const timeA = a.created_at || a.updated_at || '';
+            const timeB = b.created_at || b.updated_at || '';
+            return timeB.localeCompare(timeA);
+          });
+        };
+
+        const handleManualInput = () => {
+          localStorage.setItem('auto_draft_input_text', batchInputText.value);
+          const now = new Date();
+          const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+          autoSaveTimeText.value = `暫存 ${timeStr}`;
+        };
+
+        const initSupabase = () => {
+          if (supabaseUrl.value && supabaseKey.value && window.supabase) {
+            try {
+              supabaseClient = window.supabase.createClient(supabaseUrl.value, supabaseKey.value);
+              storageMode.value = 'supabase';
+              return true;
+            } catch (err) {
+              storageMode.value = 'local';
+              return false;
+            }
+          }
+          storageMode.value = 'local';
+          return false;
+        };
+
+        const fetchCloudRecords = async (showPrompt = false) => {
+          isLoadingData.value = true;
+          try {
+            if (storageMode.value === 'supabase' && supabaseClient) {
+              const { data, error } = await supabaseClient
+                .from('special_ed_observations')
+                .select('*')
+                .order('observation_date', { ascending: false });
+
+              if (!error && data) {
+                const formatted = data.map(item => ({
+                  ...item,
+                  showOriginal: false,
+                  isEditingRefined: false,
+                  editBuffer: item.refined_record || item.original_record || '',
+                  advice_record: item.advice_record || ''
+                }));
+                records.value = sortRecordsByDateDesc(formatted);
+                localStorage.setItem('special_ed_records', JSON.stringify(records.value));
+                if (showPrompt) showToast('已同步最新雲端手帳！');
+                initStudentFilter();
+                return;
+              }
+            }
+            const local = localStorage.getItem('special_ed_records');
+            const parsed = local ? JSON.parse(local).map(item => ({
+              ...item,
+              showOriginal: false,
+              isEditingRefined: false,
+              editBuffer: item.refined_record || item.original_record || '',
+              advice_record: item.advice_record || ''
+            })) : [];
+            records.value = sortRecordsByDateDesc(parsed);
+            initStudentFilter();
+            if (showPrompt) showToast('已載入本機手帳');
+          } catch (err) {
+            console.error(err);
+          } finally {
+            isLoadingData.value = false;
+          }
+        };
+
+        const persistSmartRecord = async (newRecord) => {
+          const existingIndex = records.value.findIndex(r => 
+            r.student_name === newRecord.student_name && r.observation_date === newRecord.observation_date
+          );
+
+          if (existingIndex !== -1) {
+            const oldRecord = records.value[existingIndex];
+            newRecord.id = oldRecord.id;
+            if (!newRecord.original_record && oldRecord.original_record) {
+              newRecord.original_record = oldRecord.original_record;
+            }
+            records.value[existingIndex] = { ...newRecord };
+          } else {
+            records.value.unshift(newRecord);
+          }
+
+          records.value = sortRecordsByDateDesc(records.value);
+          localStorage.setItem('special_ed_records', JSON.stringify(records.value));
+
+          if (storageMode.value === 'supabase' && supabaseClient) {
+            try {
+              await supabaseClient
+                .from('special_ed_observations')
+                .upsert({
+                  id: newRecord.id,
+                  student_name: newRecord.student_name,
+                  observation_date: newRecord.observation_date,
+                  original_record: newRecord.original_record || '',
+                  refined_record: newRecord.refined_record || '',
+                  advice_record: newRecord.advice_record || '',
+                  updated_at: new Date().toISOString()
+                });
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        };
+
+        const uniqueStudentNames = computed(() => {
+          const names = [];
+          for (const r of records.value) {
+            if (r.student_name && !names.includes(r.student_name)) {
+              names.push(r.student_name);
+            }
+          }
+          return names;
+        });
+
+        const initStudentFilter = () => {
+          if ((!selectedStudentFilter.value || !uniqueStudentNames.value.includes(selectedStudentFilter.value)) && uniqueStudentNames.value.length > 0) {
+            selectedStudentFilter.value = uniqueStudentNames.value[0];
+          }
+        };
+
+        watch(uniqueStudentNames, (newVal) => {
+          if (!newVal.includes(selectedStudentFilter.value) && newVal.length > 0) {
+            selectedStudentFilter.value = newVal[0];
+          }
+        });
+
+        const getStudentCount = (name) => {
+          return records.value.filter(r => r.student_name === name).length;
+        };
+
+        const currentStudentRecords = computed(() => {
+          if (!selectedStudentFilter.value) return [];
+          const list = records.value.filter(r => r.student_name === selectedStudentFilter.value);
+          return sortRecordsByDateDesc([...list]);
+        });
+
+        const searchedRecords = computed(() => {
+          let list = [...records.value];
+          if (searchKeyword.value) {
+            const kw = searchKeyword.value.toLowerCase();
+            list = list.filter(r => r.student_name && r.student_name.toLowerCase().includes(kw));
+          }
+          if (searchDate.value) {
+            list = list.filter(r => r.observation_date === searchDate.value);
+          }
+          return sortRecordsByDateDesc(list);
+        });
+
+        const getUnifiedRecord = (item) => {
+          const mainText = item.refined_record || item.original_record || '';
+          if (item.advice_record) {
+            return `${mainText}\n\n${item.advice_record}`;
+          }
+          return mainText;
+        };
+
+        const toggleEditMode = (item) => {
+          item.isEditingRefined = !item.isEditingRefined;
+          if (item.isEditingRefined) {
+            item.editBuffer = item.refined_record || item.original_record || '';
+          }
+        };
+
+        const saveEditedRefined = async (item) => {
+          item.refined_record = item.editBuffer;
+          item.isEditingRefined = false;
+          await persistSmartRecord(item);
+          showToast('✓ 已儲存最新客觀紀錄！');
+        };
+
+        const downloadCsvFile = (dataRows, filename) => {
+          const header = ['幼兒姓名', '觀察日期', '老師原始速記', '客觀潤飾紀錄', '導師與家庭建議'];
+          const rows = dataRows.map(r => [
+            `"${(r.student_name || '').replace(/"/g, '""')}"`,
+            `"${(r.observation_date || '').replace(/"/g, '""')}"`,
+            `"${(r.original_record || '').replace(/"/g, '""').replace(/\r?\n/g, '\r\n')}"`,
+            `"${(r.refined_record || '').replace(/"/g, '""').replace(/\r?\n/g, '\r\n')}"`,
+            `"${(r.advice_record || '').replace(/"/g, '""').replace(/\r?\n/g, '\r\n')}"`
+          ]);
+
+          const csvContent = '\uFEFF' + [header.join(','), ...rows.map(e => e.join(','))].join('\r\n');
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.setAttribute('href', url);
+          link.setAttribute('download', `${filename}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          showToast('✓ 試算表匯出成功！');
+        };
+
+        const exportCurrentViewCsv = () => {
+          if (currentStudentRecords.value.length === 0) return alert('目前尚無資料可匯出');
+          const name = selectedStudentFilter.value || '小朋友';
+          downloadCsvFile(currentStudentRecords.value, `${name}_特教巡輔觀察紀錄_${batchDate.value}`);
+        };
+
+        const exportAllSearchCsv = () => {
+          if (searchedRecords.value.length === 0) return alert('目前查無資料可匯出');
+          const dateSuffix = searchDate.value ? `_${searchDate.value}` : `_${batchDate.value}`;
+          downloadCsvFile(searchedRecords.value, `特教巡輔搜尋清單匯出${dateSuffix}`);
+        };
+
+        const insertBatchTemplate = () => {
+          batchInputText.value = `晨熙
+1. 踢足球 能輕踢控制 踩球停 瞄準踢進球門
+2. 學習區 拼複雜圖案拼圖 想要尋求協助
+
+小宇
+1. 團討時間容易離開座位，需老師輕拍肩膀提醒
+2. 吃點心時會伸手拿旁邊同學的餅乾`;
+          handleManualInput();
+        };
+
+        const parseBatchInput = (rawText) => {
+          const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+          const parsed = [];
+          let currentStudent = null;
+          let currentNotes = [];
+
+          const isItemLine = (str) => /^((\d+[\.、\)])|([一二三四五六七八九十]+[\.、])|([\(\（]\d+[\)\）])|[‧\-*])/.test(str);
+          const isNameHeader = (str) => {
+            if (isItemLine(str)) return false;
+            const clean = str.replace(/[:：]/g, '').trim();
+            return /^[a-zA-Z\u4e00-\u9fa5]{2,5}$/.test(clean) &&
+                   !/[，。！？」』、]/.test(str) &&
+                   !/(觀察|紀錄|今天|如果|目前|活動|時間|表現)/.test(str);
+          };
+
+          for (const line of lines) {
+            if (isNameHeader(line)) {
+              if (currentStudent && currentNotes.length > 0) {
+                parsed.push({ name: currentStudent, notes: currentNotes.join('\n') });
+              }
+              currentStudent = line.replace(/[:：]/g, '').trim();
+              currentNotes = [];
+            } else {
+              if (!currentStudent) currentStudent = '未具名幼兒';
+              currentNotes.push(line);
+            }
+          }
+
+          if (currentStudent && currentNotes.length > 0) {
+            parsed.push({ name: currentStudent, notes: currentNotes.join('\n') });
+          }
+
+          const uniqueResults = [];
+          const seenSignatures = new Set();
+          for (const item of parsed) {
+            const sig = `${item.name}_${item.notes.replace(/\s+/g, '')}`;
+            if (!seenSignatures.has(sig)) {
+              seenSignatures.add(sig);
+              uniqueResults.push(item);
+            }
+          }
+          return uniqueResults;
+        };
+
+        const buildRefineOnlyPrompt = (studentName, rawNotes) => {
+          return {
+            system: "你是一位資深的幼兒特殊教育巡迴輔導專家。請務必使用「台灣繁體中文 (Traditional Chinese)」輸出。嚴格保留原始編號順序逐點潤飾，轉化口語贅字為具體客觀行為與所需成人支持介入程度。絕對禁止添加任何大標題，也絕對不可使用任何 Markdown 星號標籤（如 * 或 **），直接以乾淨純文字與阿拉伯數字條列輸出。",
+            user: `請將以下針對幼兒【${studentName}】的觀察紀錄保留原始編號順序逐點進行繁體中文客觀潤飾（嚴禁使用 * 號）：\n\n${rawNotes}`
+          };
+        };
+
+        const buildAdvicePrompt = (studentName, confirmedRecord) => {
+          return {
+            system: "你是一位資深的幼兒特殊教育巡迴輔導專家。請務必使用「台灣繁體中文 (Traditional Chinese)」輸出。嚴格禁止在輸出中使用任何 Markdown 星號標籤（絕對不可出現 * 或 ** 符號）。請整合做法與預期成效於同一行敘述中，語意精煉實用，幫助普幼班老師能無負擔立即看懂執行。",
+            user: `已校對完成的幼兒【${studentName}】客觀紀錄如下：
+${confirmedRecord}
+
+請針對上述紀錄，嚴格依下列格式輸出（嚴禁出現任何 * 符號）：
+
+【給老師的3個小建議】
+1. 策略名稱：[具體操作做法，能直接融入現有班級常規] ➔ 預期成效：[具體改善成效]
+2. 策略名稱：[具體操作做法，能直接融入現有班級常規] ➔ 預期成效：[具體改善成效]
+3. 策略名稱：[具體操作做法，能直接融入現有班級常規] ➔ 預期成效：[具體改善成效]
+
+【給家長的3個小建議】
+‧ 生活作息：[具體順手引導作法] ➔ 預期成效：[具體改善成效]
+‧ 親子互動：[日常互動練習方向] ➔ 預期成效：[具體改善成效]
+‧ 環境引導：[居家結構或動線微調] ➔ 預期成效：[具體改善成效]`
+          };
+        };
+
+        const testAndFetchGroqModels = async () => {
+          const activeKey = groqKey.value || groqKey2.value;
+          if (!activeKey) return alert('請先填入至少一把 Groq API Key');
+          isDetectingGroq.value = true;
+          try {
+            const res = await fetch('https://api.groq.com/openai/v1/models', {
+              headers: { 'Authorization': `Bearer ${activeKey}` }
+            });
+            if (!res.ok) throw new Error('API Key 無效或網路無法連線');
+            const data = await res.json();
+            const list = (data.data || []).map(m => m.id);
+
+            rawGroqModels.value = list;
+            localStorage.setItem('groq_models_list', JSON.stringify(list));
+
+            if (filteredGroqModels.value.includes('openai/gpt-oss-120b')) {
+              groqModel.value = 'openai/gpt-oss-120b';
+            } else if (filteredGroqModels.value.length > 0) {
+              groqModel.value = filteredGroqModels.value[0];
+            }
+            showToast(`✓ 已過濾並載入 ${filteredGroqModels.value.length} 個聰明模型！`);
+          } catch (e) {
+            alert('抓取失敗：' + e.message);
+          } finally {
+            isDetectingGroq.value = false;
+          }
+        };
+
+        const callGroqApiGeneral = async (systemPrompt, userPrompt, studentName) => {
+          if (!groqKey.value && !groqKey2.value) {
+            activeTab.value = 'settings';
+            throw new Error('請先在小齒輪設定中填入 Groq API Key');
+          }
+
+          const availableKeys = [];
+          if (groqKey.value && groqKey2.value) {
+            keyUsageToggle.value = !keyUsageToggle.value;
+            if (keyUsageToggle.value) {
+              availableKeys.push(groqKey.value, groqKey2.value);
+            } else {
+              availableKeys.push(groqKey2.value, groqKey.value);
+            }
+          } else {
+            availableKeys.push(groqKey.value || groqKey2.value);
+          }
+
+          const model = groqModel.value || 'openai/gpt-oss-120b';
+
+          for (let keyIdx = 0; keyIdx < availableKeys.length; keyIdx++) {
+            const currentKey = availableKeys[keyIdx];
+            const keyLabel = (currentKey === groqKey.value) ? '金鑰一' : '金鑰二';
+
+            for (let attempt = 1; attempt <= 2; attempt++) {
+              try {
+                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentKey}`
+                  },
+                  body: JSON.stringify({
+                    model: model,
+                    messages: [
+                      { role: 'system', content: systemPrompt },
+                      { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.3
+                  })
+                });
+
+                if (res.ok) {
+                  const data = await res.json();
+                  const choice = data.choices?.[0];
+                  const msg = choice?.message;
+
+                  let outputText = (msg?.content || '').trim();
+                  if (!outputText && msg?.reasoning) {
+                    outputText = msg.reasoning.trim();
+                  }
+
+                  outputText = outputText.replace(/\*\*/g, '').replace(/\*/g, '');
+
+                  if (outputText && outputText.length > 8) {
+                    return outputText;
+                  }
+                  throw new Error('回傳內容為空，自動重試...');
+                }
+
+                const err = await res.json().catch(() => ({}));
+                const errMsg = err.error?.message || `HTTP ${res.status}`;
+
+                if ((res.status === 429 || errMsg.includes('Rate limit')) && availableKeys.length > 1 && keyIdx === 0) {
+                  activeStatusText.value = `【${studentName}】${keyLabel}額度冷卻，立即切換備用金鑰...`;
+                  break;
+                }
+
+                if (res.status === 429 || errMsg.includes('Rate limit')) {
+                  const match = errMsg.match(/try again in ([\d\.]+)s/i);
+                  let waitSec = match ? Math.ceil(parseFloat(match[1])) + 1 : 16;
+                  while (waitSec > 0) {
+                    activeStatusText.value = `額度冷卻中，${waitSec} 秒後處理【${studentName}】...`;
+                    await new Promise(r => setTimeout(r, 1000));
+                    waitSec--;
+                  }
+                  continue;
+                }
+
+                throw new Error(errMsg);
+              } catch (networkErr) {
+                if (attempt === 2 && keyIdx === availableKeys.length - 1) throw networkErr;
+                await new Promise(r => setTimeout(r, 1000));
+              }
+            }
+          }
+        };
+
+        const handleBatchRefine = async () => {
+          if (!batchInputText.value.trim()) return alert('請在文字框中輸入幼兒紀錄');
+          const studentItems = parseBatchInput(batchInputText.value);
+          if (studentItems.length === 0) return alert('未偵測到有效紀錄');
+
+          isAiProcessing.value = true;
+          let successCount = 0;
+
+          try {
+            for (let i = 0; i < studentItems.length; i++) {
+              const item = studentItems[i];
+              activeStatusText.value = `【${item.name}】客觀行為潤飾中...`;
+
+              const { system, user } = buildRefineOnlyPrompt(item.name, item.notes);
+              const refined = await callGroqApiGeneral(system, user, item.name);
+
+              const newRecord = {
+                id: 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                student_name: item.name,
+                observation_date: batchDate.value,
+                original_record: item.notes,
+                refined_record: refined,
+                advice_record: '',
+                showOriginal: false,
+                isEditingRefined: false,
+                editBuffer: refined,
+                created_at: new Date().toISOString()
+              };
+
+              await persistSmartRecord(newRecord);
+              successCount++;
+
+              if (i < studentItems.length - 1) {
+                await new Promise(r => setTimeout(r, 600));
+              }
+            }
+
+            showToast(`✓ 已完成 ${successCount} 位幼兒客觀紀錄（原稿已留存）！`);
+            batchInputText.value = '';
+            localStorage.removeItem('auto_draft_input_text');
+            autoSaveTimeText.value = '';
+
+            selectedStudentFilter.value = studentItems[0].name;
+            activeTab.value = 'students';
+          } catch (err) {
+            alert('連線提示：' + err.message);
+          } finally {
+            isAiProcessing.value = false;
+            activeStatusText.value = '';
+          }
+        };
+
+        const generateAdviceForStudent = async (item) => {
+          if (isAiProcessing.value) return;
+          const confirmedFact = item.refined_record || item.original_record;
+          if (!confirmedFact) return alert('請先有客觀紀錄內容');
+
+          isAiProcessing.value = true;
+          activeStatusText.value = `正在為【${item.student_name}】生成實務建議...`;
+
+          try {
+            const { system, user } = buildAdvicePrompt(item.student_name, confirmedFact);
+            const advice = await callGroqApiGeneral(system, user, item.student_name);
+            item.advice_record = advice;
+            await persistSmartRecord(item);
+            showToast(`✓ 已成功產出【${item.student_name}】導師與家庭建議！`);
+          } catch (err) {
+            alert('生成建議失敗：' + err.message);
+          } finally {
+            isAiProcessing.value = false;
+            activeStatusText.value = '';
+          }
+        };
+
+        const reRunSingleAi = async (item) => {
+          if (isAiProcessing.value) return;
+          isAiProcessing.value = true;
+          activeStatusText.value = `【${item.student_name}】重新潤飾中...`;
+
+          try {
+            const sourceText = item.original_record || item.refined_record;
+            const { system, user } = buildRefineOnlyPrompt(item.student_name, sourceText);
+            const refined = await callGroqApiGeneral(system, user, item.student_name);
+            item.refined_record = refined;
+            item.editBuffer = refined;
+            await persistSmartRecord(item);
+            showToast(`✓ 已更新【${item.student_name}】客觀紀錄！`);
+          } catch (err) {
+            alert('提示：' + err.message);
+          } finally {
+            isAiProcessing.value = false;
+            activeStatusText.value = '';
+          }
+        };
+
+        const handleSaveBatchDraftsOnly = async () => {
+          if (!batchInputText.value.trim()) return alert('請先輸入文字');
+          const studentItems = parseBatchInput(batchInputText.value);
+
+          for (const item of studentItems) {
+            const newRecord = {
+              id: 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+              student_name: item.name,
+              observation_date: batchDate.value,
+              original_record: item.notes,
+              refined_record: '',
+              advice_record: '',
+              showOriginal: false,
+              isEditingRefined: false,
+              editBuffer: item.notes,
+              created_at: new Date().toISOString()
+            };
+            await persistSmartRecord(newRecord);
+          }
+          showToast(`已建立 ${studentItems.length} 位幼兒草稿！`);
+          batchInputText.value = '';
+          localStorage.removeItem('auto_draft_input_text');
+          selectedStudentFilter.value = studentItems[0].name;
+          activeTab.value = 'students';
+        };
+
+        const deleteRecord = async (id) => {
+          if (!confirm('確定刪除這筆紀錄嗎？')) return;
+          records.value = records.value.filter(r => r.id !== id);
+          if (storageMode.value === 'supabase' && supabaseClient) {
+            await supabaseClient.from('special_ed_observations').delete().eq('id', id);
+          }
+          records.value = sortRecordsByDateDesc(records.value);
+          localStorage.setItem('special_ed_records', JSON.stringify(records.value));
+          initStudentFilter();
+          showToast('紀錄已刪除');
+        };
+
+        const copyToClipboard = async (text) => {
+          if (!text) return showToast('無內容可複製');
+          try {
+            await navigator.clipboard.writeText(text);
+            showToast('✓ 已複製完整通報內容！');
+          } catch (e) {
+            showToast('請手動反白複製');
+          }
+        };
+
+        const saveAndTestSettings = async () => {
+          isTestingConnection.value = true;
+          localStorage.setItem('groq_api_key', groqKey.value);
+          localStorage.setItem('groq_api_key_2', groqKey2.value);
+          localStorage.setItem('groq_model_name', groqModel.value);
+          localStorage.setItem('supabase_url', supabaseUrl.value);
+          localStorage.setItem('supabase_key', supabaseKey.value);
+
+          if (!supabaseUrl.value || !supabaseKey.value) {
+            storageMode.value = 'local';
+            isTestingConnection.value = false;
+            showToast('已儲存（本機模式）');
+            return;
+          }
+
+          try {
+            const testClient = window.supabase.createClient(supabaseUrl.value, supabaseKey.value);
+            const { data, error } = await testClient.from('special_ed_observations').select('id').limit(1);
+            if (error) throw new Error(error.message);
+            supabaseClient = testClient;
+            storageMode.value = 'supabase';
+            await fetchCloudRecords();
+            showToast('🎉 設定儲存成功！Supabase 雲端已同步');
+          } catch (err) {
+            alert('連線失敗：' + err.message);
+          } finally {
+            isTestingConnection.value = false;
+          }
+        };
+
+        onMounted(() => {
+          initSupabase();
+          fetchCloudRecords();
+        });
+
+        return {
+          activeTab,
+          records,
+          searchKeyword,
+          searchDate,
+          selectedStudentFilter,
+          uniqueStudentNames,
+          currentStudentRecords,
+          searchedRecords,
+          getStudentCount,
+          batchDate,
+          batchInputText,
+          isAiProcessing,
+          isTestingConnection,
+          isDetectingGroq,
+          isLoadingData,
+          toastMessage,
+          activeStatusText,
+          autoSaveTimeText,
+          groqKey,
+          groqKey2,
+          groqModel,
+          filteredGroqModels,
+          supabaseUrl,
+          supabaseKey,
+          storageMode,
+          currentModelShortName,
+          handleManualInput,
+          insertBatchTemplate,
+          handleBatchRefine,
+          generateAdviceForStudent,
+          reRunSingleAi,
+          toggleEditMode,
+          handleSaveBatchDraftsOnly,
+          saveEditedRefined,
+          deleteRecord,
+          copyToClipboard,
+          getUnifiedRecord,
+          saveAndTestSettings,
+          testAndFetchGroqModels,
+          fetchCloudRecords,
+          exportCurrentViewCsv,
+          exportAllSearchCsv
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
