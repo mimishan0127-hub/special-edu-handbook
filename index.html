@@ -186,7 +186,6 @@
                 <span v-if="autoSaveTimeText" class="text-[11px] text-teal-800 font-bold bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
                   {{ autoSaveTimeText }}
                 </span>
-                <!-- 優化 3：正在輸入時隱藏「帶入範本」，避免誤按覆蓋已打文字 -->
                 <button v-if="!batchInputText.trim()" @click="insertBatchTemplate" class="text-xs text-teal-700 font-bold hover:underline flex items-center">
                   🪄 帶入範本
                 </button>
@@ -221,7 +220,7 @@
         </div>
       </section>
 
-      <!-- ================= 頁籤 2：小朋友檔案 (自動置頂最新 + 完整留存原稿) ================= -->
+      <!-- ================= 頁籤 2：小朋友檔案 ================= -->
       <section v-show="activeTab === 'students'" class="space-y-3.5">
         <div class="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-soft flex items-center gap-2.5">
           <div class="relative flex-1 min-w-0">
@@ -309,7 +308,7 @@
               <pre class="whitespace-pre-wrap text-slate-800 font-sans leading-relaxed font-medium">{{ item.advice_record }}</pre>
             </div>
 
-            <!-- 保留原始速記折疊抽屜（僅在已潤飾且存在原稿時呈現對照） -->
+            <!-- 保留原始速記折疊抽屜 -->
             <div v-if="item.refined_record && item.original_record" class="border border-slate-200/80 rounded-xl bg-slate-50/50 p-2.5 text-xs">
               <button @click="item.showOriginal = !item.showOriginal" class="w-full flex justify-between items-center text-slate-600 font-bold hover:text-slate-900 transition">
                 <span class="flex items-center gap-1">
@@ -333,7 +332,6 @@
                 </button>
               </div>
 
-              <!-- 優化 1：無論是否潤飾過，重潤均採用當前校正完的最新事實為基準 -->
               <button @click="reRunSingleAi(item)" :disabled="isAiProcessing" class="text-xs text-teal-700 hover:text-teal-900 font-bold flex items-center space-x-1">
                 <span>↺</span> <span>{{ item.refined_record ? '重潤客觀紀錄' : '開始潤飾此草稿' }}</span>
               </button>
@@ -343,7 +341,7 @@
         </div>
       </section>
 
-      <!-- ================= 頁籤 3：搜尋檢索 (支援姓名 + 日期檢索 + 現場校正) ================= -->
+      <!-- ================= 頁籤 3：搜尋檢索 ================= -->
       <section v-show="activeTab === 'search'" class="space-y-3">
         <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-soft space-y-2.5">
           <div class="relative">
@@ -376,7 +374,6 @@
           <p class="text-xs font-bold text-slate-700">查無符合條件的觀察紀錄</p>
         </div>
 
-        <!-- 檢索列表：支援現場直接校正 -->
         <div v-else class="space-y-2.5">
           <div v-for="item in searchedRecords" :key="item.id" class="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2 shadow-soft">
             <div class="flex justify-between items-center pb-1.5 border-b border-slate-100">
@@ -385,7 +382,6 @@
                 <span class="text-[11px] text-slate-500">📅 {{ item.observation_date }}</span>
               </div>
               <div class="flex items-center space-x-2">
-                <!-- 優化 2：翻紀錄區塊新增校正按鈕 -->
                 <button @click="toggleEditMode(item)" class="text-xs font-bold text-indigo-700 hover:underline">
                   {{ item.isEditingRefined ? '取消' : '✏️ 校正' }}
                 </button>
@@ -395,7 +391,6 @@
               </div>
             </div>
 
-            <!-- 編輯模式 -->
             <div v-if="item.isEditingRefined" class="space-y-2 pt-1">
               <textarea v-model="item.editBuffer" rows="6" class="w-full text-xs p-2.5 rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed custom-scrollbar font-medium text-slate-800"></textarea>
               <button @click="saveEditedRefined(item)" class="w-full py-1.5 text-xs bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-sm active:scale-95 transition">
@@ -403,7 +398,6 @@
               </button>
             </div>
 
-            <!-- 檢視模式 -->
             <pre v-else class="text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed font-medium">{{ getUnifiedRecord(item) }}</pre>
           </div>
         </div>
@@ -528,6 +522,15 @@
   <script>
     const { createApp, ref, computed, watch, onMounted } = Vue;
 
+    // 核心修復：精確取得台灣在地「年-月-日」，不被 UTC 時間干擾
+    const getLocalTodayString = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     createApp({
       setup() {
         const activeTab = ref('input');
@@ -556,8 +559,27 @@
 
         let supabaseClient = null;
 
-        const batchDate = ref(new Date().toISOString().split('T')[0]);
+        // 觀察日期初始化：預設為今日在地日期
+        const batchDate = ref(getLocalTodayString());
+        const isUserModifiedDate = ref(false); // 標記是否為老師手動指定歷史日期
         const batchInputText = ref(localStorage.getItem('auto_draft_input_text') || '');
+
+        // 監聽日期是否被手動修改過
+        watch(batchDate, (newVal) => {
+          if (newVal !== getLocalTodayString()) {
+            isUserModifiedDate.value = true;
+          }
+        });
+
+        // 換日自動刷新機制：當 App 從背景喚醒或切換回分頁時，自動校正日期
+        const checkAndRefreshDateToToday = () => {
+          const realToday = getLocalTodayString();
+          // 若老師沒有手動選擇過其他日期，或是換日後重新打開，自動修正為今天
+          if (!isUserModifiedDate.value || !batchInputText.value.trim()) {
+            batchDate.value = realToday;
+            isUserModifiedDate.value = false;
+          }
+        };
 
         const showToast = (msg) => {
           toastMessage.value = msg;
@@ -753,13 +775,10 @@
           }
         };
 
-        // 優化 1：若仍為未潤飾草稿，校正存檔直接更新 original_record（事實基底）
         const saveEditedRefined = async (item) => {
           if (!item.refined_record) {
-            // 草稿狀態：存為最新原始速記基底
             item.original_record = item.editBuffer;
           } else {
-            // 已潤飾狀態：存為最新客觀紀錄
             item.refined_record = item.editBuffer;
           }
           item.isEditingRefined = false;
@@ -857,7 +876,6 @@
           return uniqueResults;
         };
 
-        // 優化 4：提取老師歷史修改範例，進行少樣本少學習（Few-shot Learning）
         const extractTeacherFewShotExamples = () => {
           const validHistory = records.value.filter(r => 
             r.original_record && 
@@ -869,7 +887,6 @@
 
           if (validHistory.length === 0) return '';
 
-          // 取最近確認校正過的 1~2 筆範本
           const samples = validHistory.slice(0, 2);
           let promptSegment = '\n【老師個人標準筆觸與校正示範】（請嚴格參考這位老師的偏好修法、客觀動詞與句子精煉度）：\n';
           samples.forEach((s, i) => {
@@ -1096,14 +1113,12 @@ ${confirmedRecord}
           }
         };
 
-        // 優化 1：若尚未潤飾，取用校正完的 original_record 作為潤飾輸入
         const reRunSingleAi = async (item) => {
           if (isAiProcessing.value) return;
           isAiProcessing.value = true;
           activeStatusText.value = `【${item.student_name}】客觀行為潤飾中...`;
 
           try {
-            // 優先取用老師在草稿中最新校正的文字，若無則取既有客觀紀錄
             const sourceText = item.original_record || item.refined_record;
             const { system, user } = buildRefineOnlyPrompt(item.student_name, sourceText);
             const refined = await callGroqApiGeneral(system, user, item.student_name);
@@ -1200,6 +1215,15 @@ ${confirmedRecord}
         onMounted(() => {
           initSupabase();
           fetchCloudRecords();
+          checkAndRefreshDateToToday();
+
+          // 註冊頁面從背景喚醒時的自動換日監聽
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+              checkAndRefreshDateToToday();
+            }
+          });
+          window.addEventListener('focus', checkAndRefreshDateToToday);
         });
 
         return {
