@@ -164,7 +164,7 @@
         <div class="bg-teal-50/80 py-2.5 px-3.5 rounded-2xl border border-teal-200 flex items-center space-x-2.5 shadow-sm">
           <span class="text-xl animate-pencil shrink-0 leading-none">✏️</span>
           <p class="text-xs text-teal-950 font-bold tracking-wide">
-            貼上速記，自動依姓名分案潤飾 ✨
+            貼上速記，同步產出客觀紀錄與輔導策略 ✨
           </p>
         </div>
 
@@ -210,7 +210,7 @@
             <button @click="handleBatchRefine" :disabled="isAiProcessing" class="w-full py-3.5 rounded-xl text-white font-extrabold text-sm bg-teal-700 hover:bg-teal-800 shadow-btn active:scale-[0.99] transition flex items-center justify-center space-x-2 disabled:opacity-50 disabled:shadow-none">
               <span v-if="!isAiProcessing">🚀</span>
               <svg v-else class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-              <span>{{ isAiProcessing ? activeStatusText : '開始逐點客觀潤飾 (繁體中文)' }}</span>
+              <span>{{ isAiProcessing ? activeStatusText : '開始客觀潤飾並生成輔導策略' }}</span>
             </button>
 
             <button @click="handleSaveBatchDraftsOnly" class="w-full py-2.5 rounded-xl text-slate-700 font-bold text-xs bg-slate-100 hover:bg-slate-200 active:scale-95 transition text-center border border-slate-200">
@@ -280,7 +280,7 @@
               </div>
 
               <div v-if="item.isEditingRefined" class="space-y-2 pt-1">
-                <textarea v-model="item.editBuffer" rows="8" class="w-full text-xs p-2.5 rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed custom-scrollbar font-medium text-slate-800"></textarea>
+                <textarea v-model="item.editBuffer" rows="7" class="w-full text-xs p-2.5 rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed custom-scrollbar font-medium text-slate-800"></textarea>
                 <button @click="saveEditedRefined(item)" class="w-full py-2 text-xs bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-sm active:scale-95 transition">
                   ✓ 儲存校正為最新版
                 </button>
@@ -295,17 +295,30 @@
               </div>
             </div>
 
-            <!-- 次區塊：給老師與家長建議 -->
-            <div v-if="item.advice_record" class="bg-amber-50/50 rounded-xl p-3 border border-amber-200/80 text-xs space-y-2">
+            <!-- 次區塊：給班級老師與家長的輔導策略建議（同步生成且支援編輯） -->
+            <div v-if="item.advice_record || item.isEditingAdvice" class="bg-amber-50/60 rounded-xl p-3 border border-amber-200/80 text-xs space-y-2">
               <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold text-amber-900 tracking-wider flex items-center gap-1">
-                  <span>💡</span> 班級與家庭實務建議
+                  <span>💡</span> 班級與家庭輔導策略建議
                 </span>
-                <button @click="item.advice_record = ''; persistSmartRecord(item);" class="text-[10px] text-rose-500 hover:underline">
-                  清除建議
+                <div class="flex items-center space-x-2">
+                  <button @click="toggleAdviceEditMode(item)" class="text-[11px] font-bold text-indigo-700 hover:underline">
+                    {{ item.isEditingAdvice ? '取消' : '✏️ 編輯策略' }}
+                  </button>
+                  <button v-if="!item.isEditingAdvice" @click="item.advice_record = ''; persistSmartRecord(item);" class="text-[10px] text-rose-500 hover:underline">
+                    清除
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="item.isEditingAdvice" class="space-y-2 pt-1">
+                <textarea v-model="item.adviceEditBuffer" rows="6" class="w-full text-xs p-2.5 rounded-lg border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white leading-relaxed custom-scrollbar font-medium text-slate-800"></textarea>
+                <button @click="saveEditedAdvice(item)" class="w-full py-1.5 text-xs bg-amber-600 text-white font-bold rounded-lg hover:bg-amber-700 shadow-sm active:scale-95 transition">
+                  ✓ 儲存輔導策略
                 </button>
               </div>
-              <pre class="whitespace-pre-wrap text-slate-800 font-sans leading-relaxed font-medium">{{ item.advice_record }}</pre>
+
+              <pre v-else class="whitespace-pre-wrap text-slate-800 font-sans leading-relaxed font-medium">{{ item.advice_record }}</pre>
             </div>
 
             <!-- 保留原始速記折疊抽屜 -->
@@ -325,15 +338,15 @@
             <div class="flex items-center justify-between pt-1 text-xs">
               <div>
                 <button v-if="item.refined_record && !item.advice_record" @click="generateAdviceForStudent(item)" :disabled="isAiProcessing" class="px-2.5 py-1 text-xs font-bold text-teal-900 bg-teal-100 hover:bg-teal-200 border border-teal-300 rounded-lg shadow-sm transition flex items-center space-x-1">
-                  <span>💡</span> <span>生成導師與家庭建議</span>
+                  <span>💡</span> <span>生成輔導策略建議</span>
                 </button>
-                <button v-else-if="item.advice_record" @click="generateAdviceForStudent(item)" :disabled="isAiProcessing" class="text-[11px] text-teal-700 hover:underline font-bold">
-                  ↺ 重新生成建議
+                <button v-else-if="item.advice_record" @click="generateAdviceForStudent(item)" :disabled="isAiProcessing" class="text-[11px] text-amber-800 hover:underline font-bold">
+                  ↺ 僅重整輔導策略
                 </button>
               </div>
 
               <button @click="reRunSingleAi(item)" :disabled="isAiProcessing" class="text-xs text-teal-700 hover:text-teal-900 font-bold flex items-center space-x-1">
-                <span>↺</span> <span>{{ item.refined_record ? '重潤客觀紀錄' : '開始潤飾此草稿' }}</span>
+                <span>↺</span> <span>{{ item.refined_record ? '重潤紀錄與策略' : '開始潤飾與生成策略' }}</span>
               </button>
             </div>
 
@@ -341,11 +354,11 @@
         </div>
       </section>
 
-      <!-- ================= 頁籤 3：搜尋檢索 ================= -->
+      <!-- ================= 頁籤 3：搜尋檢索（同時完整呈現：潤飾後文字 ＋ 建議策略 ＋ 原始速記） ================= -->
       <section v-show="activeTab === 'search'" class="space-y-3">
         <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-soft space-y-2.5">
           <div class="relative">
-            <input v-model.trim="searchKeyword" type="text" placeholder="輸入小朋友名字搜尋..." class="w-full text-xs pl-8 pr-8 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 bg-slate-50 font-medium text-slate-800">
+            <input v-model.trim="searchKeyword" type="text" placeholder="搜尋小朋友名字、行為、輔導策略或原始速記..." class="w-full text-xs pl-8 pr-8 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 bg-slate-50 font-medium text-slate-800">
             <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             <button v-if="searchKeyword" @click="searchKeyword = ''" class="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600">✕</button>
           </div>
@@ -371,34 +384,75 @@
 
         <div v-if="searchedRecords.length === 0" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500 space-y-1.5">
           <span class="text-3xl block">🔍</span>
-          <p class="text-xs font-bold text-slate-700">查無符合條件的觀察紀錄</p>
+          <p class="text-xs font-bold text-slate-700">查無符合條件的觀察紀錄或策略</p>
         </div>
 
-        <div v-else class="space-y-2.5">
-          <div v-for="item in searchedRecords" :key="item.id" class="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2 shadow-soft">
-            <div class="flex justify-between items-center pb-1.5 border-b border-slate-100">
+        <!-- 檢索列表：每筆卡片務必同時呈現「1.潤飾後文字」「2.建議策略」「3.原始速記」 -->
+        <div v-else class="space-y-3">
+          <div v-for="item in searchedRecords" :key="item.id" class="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2.5 shadow-soft">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-100">
               <div class="flex items-center space-x-1.5">
                 <span class="text-xs font-extrabold text-slate-900">🧸 {{ item.student_name }}</span>
                 <span class="text-[11px] text-slate-500">📅 {{ item.observation_date }}</span>
               </div>
               <div class="flex items-center space-x-2">
-                <button @click="toggleEditMode(item)" class="text-xs font-bold text-indigo-700 hover:underline">
-                  {{ item.isEditingRefined ? '取消' : '✏️ 校正' }}
+                <button @click="toggleSearchEditMode(item)" class="text-xs font-bold text-indigo-700 hover:underline">
+                  {{ item.isEditingSearch ? '取消' : '✏️ 校正' }}
                 </button>
                 <button @click="copyToClipboard(getUnifiedRecord(item))" class="text-xs text-teal-700 font-bold hover:underline">
-                  複製通報
+                  📋 複製通報
                 </button>
               </div>
             </div>
 
-            <div v-if="item.isEditingRefined" class="space-y-2 pt-1">
-              <textarea v-model="item.editBuffer" rows="6" class="w-full text-xs p-2.5 rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed custom-scrollbar font-medium text-slate-800"></textarea>
-              <button @click="saveEditedRefined(item)" class="w-full py-1.5 text-xs bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-sm active:scale-95 transition">
-                ✓ 儲存校正
+            <!-- 翻紀錄專屬編輯模式（支援同時校正潤飾文字、輔導策略、原始速記） -->
+            <div v-if="item.isEditingSearch" class="space-y-2.5 pt-1">
+              <div>
+                <label class="block text-[10px] font-bold text-teal-800 mb-1">✨ 潤飾後的客觀行為紀錄</label>
+                <textarea v-model="item.editBuffer" rows="5" class="w-full text-xs p-2.5 rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed custom-scrollbar font-medium text-slate-800"></textarea>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-amber-800 mb-1">💡 班級與家庭輔導策略建議</label>
+                <textarea v-model="item.adviceEditBuffer" rows="5" class="w-full text-xs p-2.5 rounded-lg border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white leading-relaxed custom-scrollbar font-medium text-slate-800"></textarea>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-1">📄 老師原始輸入速記</label>
+                <textarea v-model="item.originalEditBuffer" rows="4" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 bg-slate-50 leading-relaxed custom-scrollbar font-normal text-slate-700"></textarea>
+              </div>
+              <button @click="saveSearchEdited(item)" class="w-full py-2 text-xs bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-sm active:scale-95 transition">
+                ✓ 儲存所有修改
               </button>
             </div>
 
-            <pre v-else class="text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed font-medium">{{ getUnifiedRecord(item) }}</pre>
+            <!-- 檢視模式：三大部分同時並列顯示 -->
+            <div v-else class="space-y-2.5">
+              <!-- 1. 潤飾後的文字 -->
+              <div class="bg-teal-50/40 rounded-xl p-2.5 border border-teal-200/70 space-y-1">
+                <div class="text-[10px] font-extrabold text-teal-800 flex items-center gap-1">
+                  <span>✨</span> <span>潤飾後的客觀紀錄</span>
+                </div>
+                <pre v-if="item.refined_record" class="text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed font-medium">{{ item.refined_record }}</pre>
+                <p v-else class="text-[11px] text-slate-400 italic">（尚未執行 AI 潤飾）</p>
+              </div>
+
+              <!-- 2. 建議策略 -->
+              <div class="bg-amber-50/70 rounded-xl p-2.5 border border-amber-200/80 space-y-1">
+                <div class="text-[10px] font-extrabold text-amber-900 flex items-center gap-1">
+                  <span>💡</span> <span>班級與家庭輔導策略建議</span>
+                </div>
+                <pre v-if="item.advice_record" class="text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed font-medium">{{ item.advice_record }}</pre>
+                <p v-else class="text-[11px] text-slate-400 italic">（尚無輔導策略建議）</p>
+              </div>
+
+              <!-- 3. 原始速記 -->
+              <div class="bg-slate-50 rounded-xl p-2.5 border border-slate-200/90 space-y-1">
+                <div class="text-[10px] font-extrabold text-slate-600 flex items-center gap-1">
+                  <span>📄</span> <span>老師原始輸入速記</span>
+                </div>
+                <pre v-if="item.original_record" class="text-xs text-slate-700 whitespace-pre-wrap font-sans leading-relaxed font-normal">{{ item.original_record }}</pre>
+                <p v-else class="text-[11px] text-slate-400 italic">（無留存原始速記）</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -522,7 +576,7 @@
   <script>
     const { createApp, ref, computed, watch, onMounted } = Vue;
 
-    // 核心修復：精確取得台灣在地「年-月-日」，不被 UTC 時間干擾
+    // 精確取得台灣在地「年-月-日」
     const getLocalTodayString = () => {
       const now = new Date();
       const year = now.getFullYear();
@@ -559,22 +613,18 @@
 
         let supabaseClient = null;
 
-        // 觀察日期初始化：預設為今日在地日期
         const batchDate = ref(getLocalTodayString());
-        const isUserModifiedDate = ref(false); // 標記是否為老師手動指定歷史日期
+        const isUserModifiedDate = ref(false);
         const batchInputText = ref(localStorage.getItem('auto_draft_input_text') || '');
 
-        // 監聽日期是否被手動修改過
         watch(batchDate, (newVal) => {
           if (newVal !== getLocalTodayString()) {
             isUserModifiedDate.value = true;
           }
         });
 
-        // 換日自動刷新機制：當 App 從背景喚醒或切換回分頁時，自動校正日期
         const checkAndRefreshDateToToday = () => {
           const realToday = getLocalTodayString();
-          // 若老師沒有手動選擇過其他日期，或是換日後重新打開，自動修正為今天
           if (!isUserModifiedDate.value || !batchInputText.value.trim()) {
             batchDate.value = realToday;
             isUserModifiedDate.value = false;
@@ -636,6 +686,18 @@
           return false;
         };
 
+        const hydrateItemFlags = (item) => ({
+          ...item,
+          showOriginal: false,
+          isEditingRefined: false,
+          isEditingAdvice: false,
+          isEditingSearch: false,
+          editBuffer: item.refined_record || '',
+          adviceEditBuffer: item.advice_record || '',
+          originalEditBuffer: item.original_record || '',
+          advice_record: item.advice_record || ''
+        });
+
         const fetchCloudRecords = async (showPrompt = false) => {
           isLoadingData.value = true;
           try {
@@ -646,13 +708,7 @@
                 .order('observation_date', { ascending: false });
 
               if (!error && data) {
-                const formatted = data.map(item => ({
-                  ...item,
-                  showOriginal: false,
-                  isEditingRefined: false,
-                  editBuffer: item.refined_record || item.original_record || '',
-                  advice_record: item.advice_record || ''
-                }));
+                const formatted = data.map(hydrateItemFlags);
                 records.value = sortRecordsByDateDesc(formatted);
                 localStorage.setItem('special_ed_records', JSON.stringify(records.value));
                 if (showPrompt) showToast('已同步最新雲端手帳！');
@@ -661,13 +717,7 @@
               }
             }
             const local = localStorage.getItem('special_ed_records');
-            const parsed = local ? JSON.parse(local).map(item => ({
-              ...item,
-              showOriginal: false,
-              isEditingRefined: false,
-              editBuffer: item.refined_record || item.original_record || '',
-              advice_record: item.advice_record || ''
-            })) : [];
+            const parsed = local ? JSON.parse(local).map(hydrateItemFlags) : [];
             records.value = sortRecordsByDateDesc(parsed);
             initStudentFilter();
             if (showPrompt) showToast('已載入本機手帳');
@@ -686,7 +736,7 @@
           if (existingIndex !== -1) {
             const oldRecord = records.value[existingIndex];
             newRecord.id = oldRecord.id;
-            if (!newRecord.original_record && oldRecord.original_record) {
+            if (!newRecord.original_record && oldRecord.original_record && newRecord.original_record !== '') {
               newRecord.original_record = oldRecord.original_record;
             }
             records.value[existingIndex] = { ...newRecord };
@@ -748,11 +798,17 @@
           return sortRecordsByDateDesc([...list]);
         });
 
+        // 翻紀錄複合檢索：支援「幼兒姓名、客觀行為紀錄、班級與家庭輔導策略、原始速記」及「日期」
         const searchedRecords = computed(() => {
           let list = [...records.value];
           if (searchKeyword.value) {
             const kw = searchKeyword.value.toLowerCase();
-            list = list.filter(r => r.student_name && r.student_name.toLowerCase().includes(kw));
+            list = list.filter(r => 
+              (r.student_name && r.student_name.toLowerCase().includes(kw)) ||
+              (r.refined_record && r.refined_record.toLowerCase().includes(kw)) ||
+              (r.advice_record && r.advice_record.toLowerCase().includes(kw)) ||
+              (r.original_record && r.original_record.toLowerCase().includes(kw))
+            );
           }
           if (searchDate.value) {
             list = list.filter(r => r.observation_date === searchDate.value);
@@ -768,6 +824,7 @@
           return mainText;
         };
 
+        // 小朋友頁籤：客觀紀錄編輯
         const toggleEditMode = (item) => {
           item.isEditingRefined = !item.isEditingRefined;
           if (item.isEditingRefined) {
@@ -786,8 +843,42 @@
           showToast('✓ 已儲存最新事實文字！');
         };
 
+        // 小朋友頁籤：輔導策略編輯
+        const toggleAdviceEditMode = (item) => {
+          item.isEditingAdvice = !item.isEditingAdvice;
+          if (item.isEditingAdvice) {
+            item.adviceEditBuffer = item.advice_record || '';
+          }
+        };
+
+        const saveEditedAdvice = async (item) => {
+          item.advice_record = item.adviceEditBuffer.trim();
+          item.isEditingAdvice = false;
+          await persistSmartRecord(item);
+          showToast('✓ 已儲存輔導策略！');
+        };
+
+        // 翻紀錄頁籤：同步編輯潤飾文字、輔導策略、原始速記
+        const toggleSearchEditMode = (item) => {
+          item.isEditingSearch = !item.isEditingSearch;
+          if (item.isEditingSearch) {
+            item.editBuffer = item.refined_record || '';
+            item.adviceEditBuffer = item.advice_record || '';
+            item.originalEditBuffer = item.original_record || '';
+          }
+        };
+
+        const saveSearchEdited = async (item) => {
+          item.refined_record = (item.editBuffer || '').trim();
+          item.advice_record = (item.adviceEditBuffer || '').trim();
+          item.original_record = (item.originalEditBuffer || '').trim();
+          item.isEditingSearch = false;
+          await persistSmartRecord(item);
+          showToast('✓ 已儲存所有修改！');
+        };
+
         const downloadCsvFile = (dataRows, filename) => {
-          const header = ['幼兒姓名', '觀察日期', '老師原始速記', '客觀潤飾紀錄', '導師與家庭建議'];
+          const header = ['幼兒姓名', '觀察日期', '老師原始速記', '客觀潤飾紀錄', '班級與家庭輔導策略建議'];
           const rows = dataRows.map(r => [
             `"${(r.student_name || '').replace(/"/g, '""')}"`,
             `"${(r.observation_date || '').replace(/"/g, '""')}"`,
@@ -895,31 +986,77 @@
           return promptSegment;
         };
 
-        const buildRefineOnlyPrompt = (studentName, rawNotes) => {
+        const buildCombinedRefineAndStrategyPrompt = (studentName, rawNotes) => {
           const teacherExamples = extractTeacherFewShotExamples();
           return {
-            system: `你是一位資深的幼兒特殊教育巡迴輔導專家。請務必使用「台灣繁體中文 (Traditional Chinese)」輸出。嚴格保留原始編號順序逐點潤飾，轉化口語贅字為具體客觀行為與所需成人支持介入程度。絕對禁止添加任何大標題，也絕對不可使用任何 Markdown 星號標籤（如 * 或 **），直接以乾淨純文字與阿拉伯數字條列輸出。${teacherExamples}`,
-            user: `請將以下針對幼兒【${studentName}】的觀察紀錄保留原始編號順序逐點進行繁體中文客觀潤飾（嚴禁使用 * 號）：\n\n${rawNotes}`
+            system: `你是一位資深的幼兒特殊教育巡迴輔導專家。請務必使用「台灣繁體中文 (Traditional Chinese)」輸出。
+你的任務分為兩部分，中間必須嚴格使用一行「===STRATEGY_SPLIT===」分隔，方便系統自動分欄存檔：
+
+【第一部分：客觀行為潤飾】
+1. 嚴格保留原始編號順序逐點潤飾，轉化口語贅字為具體客觀行為與所需成人支持介入程度。
+2. 絕對禁止添加任何大標題，也絕對不可使用任何 Markdown 星號標籤（如 * 或 **）。
+
+【第二部分：針對該生狀況的輔導策略想法】
+1. 緊扣第一部分潤飾後的學生行為表現與需求給予具體輔導策略想法，不要給泛泛空談。
+2. 班級老師與家長各自提供「1 到 2 種」輔導策略想法即可，語意精煉務實，不需要過度複雜，也不必受限於極簡操作。
+3. 絕對不要寫出「預期成效」或預測結果。
+4. 嚴禁使用任何 Markdown 星號標籤（如 * 或 **）。${teacherExamples}`,
+            user: `請針對幼兒【${studentName}】的觀察紀錄進行客觀潤飾，並於分隔線下方提供針對此學生狀況的班級老師與家長輔導策略（嚴禁使用 * 號，也不要寫預期成效）：
+
+原始觀察紀錄：
+${rawNotes}
+
+請嚴格依照以下結構輸出：
+1. [逐點客觀潤飾內容]
+2. [逐點客觀潤飾內容]
+===STRATEGY_SPLIT===
+【給班級老師的輔導策略建議】
+1. [策略重點]：[針對上述學生狀況的具體輔導策略想法]
+2. [策略重點]：[針對上述學生狀況的具體輔導策略想法（1至2種即可）]
+
+【給家長的輔導策略建議】
+1. [策略重點]：[針對上述學生狀況的居家引導與輔導想法]
+2. [策略重點]：[針對上述學生狀況的居家引導與輔導想法（1至2種即可）]`
           };
         };
 
-        const buildAdvicePrompt = (studentName, confirmedRecord) => {
+        const buildAdviceOnlyPrompt = (studentName, confirmedRecord) => {
           return {
-            system: "你是一位資深的幼兒特殊教育巡迴輔導專家。請務必使用「台灣繁體中文 (Traditional Chinese)」輸出。嚴格禁止在輸出中使用任何 Markdown 星號標籤（絕對不可出現 * 或 ** 符號）。請整合做法與預期成效於同一行敘述中，語意精煉實用，幫助普幼班老師能無負擔立即看懂執行。",
-            user: `已校對完成的幼兒【${studentName}】客觀紀錄如下：
+            system: "你是一位資深的幼兒特殊教育巡迴輔導專家。請務必使用「台灣繁體中文 (Traditional Chinese)」輸出。嚴格禁止在輸出中使用任何 Markdown 星號標籤（絕對不可出現 * 或 ** 符號）。請針對該生潤飾後的客觀行為表現與需求，為班級老師與家長各提供 1 到 2 種務實的輔導策略想法，不需太複雜，也不必受限於極簡操作，且絕對不要寫出「預期成效」。",
+            user: `已校對完成的幼兒【${studentName}】客觀行為紀錄如下：
 ${confirmedRecord}
 
-請針對上述紀錄，嚴格依下列格式輸出（嚴禁出現任何 * 符號）：
+請針對上述學生狀況，嚴格依下列格式輸出（嚴禁出現 * 符號，也不要寫預期成效）：
 
-【給老師的3個小建議】
-1. 策略名稱：[具體操作做法，能直接融入現有班級常規] ➔ 預期成效：[具體改善成效]
-2. 策略名稱：[具體操作做法，能直接融入現有班級常規] ➔ 預期成效：[具體改善成效]
-3. 策略名稱：[具體操作做法，能直接融入現有班級常規] ➔ 預期成效：[具體改善成效]
+【給班級老師的輔導策略建議】
+1. [策略重點]：[針對上述學生狀況的具體輔導策略想法]
+2. [策略重點]：[針對上述學生狀況的具體輔導策略想法（1至2種即可）]
 
-【給家長的3個小建議】
-‧ 生活作息：[具體順手引導作法] ➔ 預期成效：[具體改善成效]
-‧ 親子互動：[日常互動練習方向] ➔ 預期成效：[具體改善成效]
-‧ 環境引導：[居家結構或動線微調] ➔ 預期成效：[具體改善成效]`
+【給家長的輔導策略建議】
+1. [策略重點]：[針對上述學生狀況的居家引導與輔導想法]
+2. [策略重點]：[針對上述學生狀況的居家引導與輔導想法（1至2種即可）]`
+          };
+        };
+
+        const parseCombinedAiOutput = (fullText) => {
+          const cleanText = fullText.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+          if (cleanText.includes('===STRATEGY_SPLIT===')) {
+            const parts = cleanText.split('===STRATEGY_SPLIT===');
+            return {
+              refined: parts[0].trim(),
+              advice: parts.slice(1).join('\n').trim()
+            };
+          }
+          const fallbackIdx = cleanText.indexOf('【給班級老師');
+          if (fallbackIdx !== -1) {
+            return {
+              refined: cleanText.slice(0, fallbackIdx).trim(),
+              advice: cleanText.slice(fallbackIdx).trim()
+            };
+          }
+          return {
+            refined: cleanText,
+            advice: ''
           };
         };
 
@@ -1050,10 +1187,11 @@ ${confirmedRecord}
           try {
             for (let i = 0; i < studentItems.length; i++) {
               const item = studentItems[i];
-              activeStatusText.value = `【${item.name}】客觀行為潤飾中...`;
+              activeStatusText.value = `【${item.name}】潤飾紀錄與生成策略中...`;
 
-              const { system, user } = buildRefineOnlyPrompt(item.name, item.notes);
-              const refined = await callGroqApiGeneral(system, user, item.name);
+              const { system, user } = buildCombinedRefineAndStrategyPrompt(item.name, item.notes);
+              const rawAiOutput = await callGroqApiGeneral(system, user, item.name);
+              const { refined, advice } = parseCombinedAiOutput(rawAiOutput);
 
               const newRecord = {
                 id: 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
@@ -1061,10 +1199,14 @@ ${confirmedRecord}
                 observation_date: batchDate.value,
                 original_record: item.notes,
                 refined_record: refined,
-                advice_record: '',
+                advice_record: advice,
                 showOriginal: false,
                 isEditingRefined: false,
+                isEditingAdvice: false,
+                isEditingSearch: false,
                 editBuffer: refined,
+                adviceEditBuffer: advice,
+                originalEditBuffer: item.notes,
                 created_at: new Date().toISOString()
               };
 
@@ -1076,7 +1218,7 @@ ${confirmedRecord}
               }
             }
 
-            showToast(`✓ 已完成 ${successCount} 位幼兒客觀紀錄（原稿已留存）！`);
+            showToast(`✓ 已同步完成 ${successCount} 位幼兒紀錄與輔導策略！`);
             batchInputText.value = '';
             localStorage.removeItem('auto_draft_input_text');
             autoSaveTimeText.value = '';
@@ -1097,14 +1239,15 @@ ${confirmedRecord}
           if (!confirmedFact) return alert('請先有客觀紀錄內容');
 
           isAiProcessing.value = true;
-          activeStatusText.value = `正在為【${item.student_name}】生成實務建議...`;
+          activeStatusText.value = `正在為【${item.student_name}】生成輔導策略...`;
 
           try {
-            const { system, user } = buildAdvicePrompt(item.student_name, confirmedFact);
+            const { system, user } = buildAdviceOnlyPrompt(item.student_name, confirmedFact);
             const advice = await callGroqApiGeneral(system, user, item.student_name);
             item.advice_record = advice;
+            item.adviceEditBuffer = advice;
             await persistSmartRecord(item);
-            showToast(`✓ 已成功產出【${item.student_name}】導師與家庭建議！`);
+            showToast(`✓ 已更新【${item.student_name}】輔導策略建議！`);
           } catch (err) {
             alert('生成建議失敗：' + err.message);
           } finally {
@@ -1116,16 +1259,22 @@ ${confirmedRecord}
         const reRunSingleAi = async (item) => {
           if (isAiProcessing.value) return;
           isAiProcessing.value = true;
-          activeStatusText.value = `【${item.student_name}】客觀行為潤飾中...`;
+          activeStatusText.value = `【${item.student_name}】潤飾紀錄與生成策略中...`;
 
           try {
             const sourceText = item.original_record || item.refined_record;
-            const { system, user } = buildRefineOnlyPrompt(item.student_name, sourceText);
-            const refined = await callGroqApiGeneral(system, user, item.student_name);
+            const { system, user } = buildCombinedRefineAndStrategyPrompt(item.student_name, sourceText);
+            const rawAiOutput = await callGroqApiGeneral(system, user, item.student_name);
+            const { refined, advice } = parseCombinedAiOutput(rawAiOutput);
+
             item.refined_record = refined;
             item.editBuffer = refined;
+            if (advice) {
+              item.advice_record = advice;
+              item.adviceEditBuffer = advice;
+            }
             await persistSmartRecord(item);
-            showToast(`✓ 已成功潤飾【${item.student_name}】客觀紀錄！`);
+            showToast(`✓ 已同步更新【${item.student_name}】客觀紀錄與策略！`);
           } catch (err) {
             alert('提示：' + err.message);
           } finally {
@@ -1148,7 +1297,11 @@ ${confirmedRecord}
               advice_record: '',
               showOriginal: false,
               isEditingRefined: false,
-              editBuffer: item.notes,
+              isEditingAdvice: false,
+              isEditingSearch: false,
+              editBuffer: '',
+              adviceEditBuffer: '',
+              originalEditBuffer: item.notes,
               created_at: new Date().toISOString()
             };
             await persistSmartRecord(newRecord);
@@ -1176,7 +1329,7 @@ ${confirmedRecord}
           if (!text) return showToast('無內容可複製');
           try {
             await navigator.clipboard.writeText(text);
-            showToast('✓ 已複製完整通報內容！');
+            showToast('✓ 已複製完整通報與策略內容！');
           } catch (e) {
             showToast('請手動反白複製');
           }
@@ -1217,7 +1370,6 @@ ${confirmedRecord}
           fetchCloudRecords();
           checkAndRefreshDateToToday();
 
-          // 註冊頁面從背景喚醒時的自動換日監聽
           document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
               checkAndRefreshDateToToday();
@@ -1259,8 +1411,12 @@ ${confirmedRecord}
           generateAdviceForStudent,
           reRunSingleAi,
           toggleEditMode,
-          handleSaveBatchDraftsOnly,
           saveEditedRefined,
+          toggleAdviceEditMode,
+          saveEditedAdvice,
+          toggleSearchEditMode,
+          saveSearchEdited,
+          handleSaveBatchDraftsOnly,
           deleteRecord,
           copyToClipboard,
           getUnifiedRecord,
