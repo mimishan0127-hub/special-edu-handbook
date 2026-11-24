@@ -135,7 +135,7 @@
           <div class="flex items-center space-x-1.5">
             <h1 class="text-sm font-extrabold text-slate-900 tracking-tight truncate">特教巡輔小特助</h1>
             <span class="px-1.5 py-0.5 text-[10px] font-bold bg-teal-50 text-teal-800 rounded-md border border-teal-200 shrink-0">
-              巡輔專用
+              v1.1
             </span>
           </div>
           <p class="text-[11px] text-teal-700 font-bold truncate">
@@ -237,8 +237,8 @@
             </div>
           </div>
 
-          <button v-if="records.length > 0" @click="exportCurrentViewCsv" class="px-3 py-2.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-xl shrink-0 flex items-center space-x-1 transition shadow-sm mt-3" title="匯出 Excel / 試算表">
-            <span>📊 匯出試算表</span>
+          <button v-if="records.length > 0" @click="exportCurrentViewCsv" class="px-3 py-2.5 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-xl shrink-0 flex items-center space-x-1 transition shadow-sm mt-3" title="匯出此幼兒全部試算表">
+            <span>📊 匯出全部</span>
           </button>
         </div>
 
@@ -262,7 +262,7 @@
                 <button @click="copyToClipboard(getUnifiedRecord(item))" class="px-2 py-1 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-lg transition flex items-center space-x-1">
                   <span>📋 複製通報</span>
                 </button>
-                <button @click="deleteRecord(item.id)" class="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition">
+                <button @click="deleteRecord(item.id)" class="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition" title="刪除此筆紀錄">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
               </div>
@@ -354,32 +354,60 @@
         </div>
       </section>
 
-      <!-- ================= 頁籤 3：搜尋檢索（同時完整呈現：潤飾後文字 ＋ 建議策略 ＋ 原始速記） ================= -->
+      <!-- ================= 頁籤 3：搜尋檢索（支援日期區間匯出 ＋ 2階段確認批量刪除） ================= -->
       <section v-show="activeTab === 'search'" class="space-y-3">
         <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-soft space-y-2.5">
+          <!-- 關鍵字搜尋（可輸入幼兒姓名篩選特定學生） -->
           <div class="relative">
-            <input v-model.trim="searchKeyword" type="text" placeholder="搜尋小朋友名字、行為、輔導策略或原始速記..." class="w-full text-xs pl-8 pr-8 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 bg-slate-50 font-medium text-slate-800">
+            <input v-model.trim="searchKeyword" type="text" placeholder="輸入小朋友名字、行為、策略或原始速記..." class="w-full text-xs pl-8 pr-8 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-600 bg-slate-50 font-medium text-slate-800">
             <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             <button v-if="searchKeyword" @click="searchKeyword = ''" class="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600">✕</button>
           </div>
 
-          <div class="flex items-center gap-2 pt-0.5">
-            <div class="flex-1 flex items-center bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1">
-              <span class="text-xs mr-1 text-slate-500">📅</span>
-              <input v-model="searchDate" type="date" class="text-xs bg-transparent border-0 font-bold text-slate-800 focus:outline-none w-full">
+          <!-- 日期區間篩選（起始日 ～ 結束日） -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[10px] font-bold text-slate-500 px-0.5">
+              <span>📅 觀察日期區間篩選（可搭配姓名匯出）</span>
+              <button v-if="searchStartDate || searchEndDate" @click="clearDateRange" class="text-teal-700 hover:underline font-bold">
+                清除區間
+              </button>
             </div>
-            <button v-if="searchDate" @click="searchDate = ''" class="px-2.5 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition border border-slate-200 shrink-0">
-              清除日期
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+              <input v-model="searchStartDate" type="date" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded-xl px-2 py-1.5 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600">
+              <span class="text-xs text-slate-400 font-bold">～</span>
+              <input v-model="searchEndDate" type="date" class="w-full text-[11px] bg-slate-50 border border-slate-300 rounded-xl px-2 py-1.5 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600">
+            </div>
+          </div>
+
+          <!-- 功能操作列：區間匯出 ＋ 批量刪除切換 -->
+          <div class="grid grid-cols-2 gap-2 pt-0.5">
+            <button @click="exportAllSearchCsv" :disabled="searchedRecords.length === 0" class="py-2 px-2.5 text-xs font-bold text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-xl transition flex items-center justify-center space-x-1 disabled:opacity-40">
+              <span>📊</span>
+              <span>匯出區間紀錄 ({{ searchedRecords.length }})</span>
             </button>
-            <button @click="exportAllSearchCsv" :disabled="searchedRecords.length === 0" class="px-3 py-1.5 text-xs font-bold text-teal-900 bg-teal-100 hover:bg-teal-200 border border-teal-300 rounded-xl shrink-0 transition">
-              匯出清單
+
+            <button @click="toggleBatchSelectMode" :disabled="searchedRecords.length === 0 && !isBatchSelectMode" class="py-2 px-2.5 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1 border disabled:opacity-40" :class="isBatchSelectMode ? 'bg-slate-700 text-white border-slate-700' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'">
+              <span>{{ isBatchSelectMode ? '✕ 退出批量模式' : '🗑️ 批量刪除' }}</span>
+            </button>
+          </div>
+
+          <!-- 批量選取控制列 -->
+          <div v-if="isBatchSelectMode" class="bg-rose-50/90 border border-rose-200 rounded-xl p-2.5 flex items-center justify-between gap-2">
+            <button @click="toggleSelectAllFiltered" class="text-xs font-bold text-slate-800 bg-white px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 transition">
+              {{ isAllFilteredSelected ? '取消全選' : `全選目前 ${searchedRecords.length} 筆` }}
+            </button>
+
+            <button @click="openTwoStageDeleteModal" :disabled="selectedRecordIds.length === 0" class="px-3 py-1.5 text-xs font-extrabold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm transition disabled:opacity-40 flex items-center space-x-1">
+              <span>🗑️ 刪除已選 ({{ selectedRecordIds.length }})</span>
             </button>
           </div>
         </div>
 
         <div class="flex justify-between items-center text-[11px] text-slate-500 px-1 font-semibold">
           <span>找到 {{ searchedRecords.length }} 筆符合紀錄</span>
-          <span v-if="searchDate">篩選日期：{{ searchDate }}</span>
+          <span v-if="searchStartDate || searchEndDate">
+            區間：{{ searchStartDate || '最早' }} ～ {{ searchEndDate || '最新' }}
+          </span>
         </div>
 
         <div v-if="searchedRecords.length === 0" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500 space-y-1.5">
@@ -387,15 +415,17 @@
           <p class="text-xs font-bold text-slate-700">查無符合條件的觀察紀錄或策略</p>
         </div>
 
-        <!-- 檢索列表：每筆卡片務必同時呈現「1.潤飾後文字」「2.建議策略」「3.原始速記」 -->
+        <!-- 檢索列表：每筆卡片同時呈現「1.潤飾後文字」「2.建議策略」「3.原始速記」 -->
         <div v-else class="space-y-3">
-          <div v-for="item in searchedRecords" :key="item.id" class="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2.5 shadow-soft">
+          <div v-for="item in searchedRecords" :key="item.id" @click="isBatchSelectMode ? toggleRecordSelection(item.id) : null" class="bg-white rounded-2xl border p-3.5 space-y-2.5 shadow-soft transition" :class="[isBatchSelectMode ? 'cursor-pointer' : '', selectedRecordIds.includes(item.id) ? 'border-rose-400 ring-2 ring-rose-200 bg-rose-50/10' : 'border-slate-200']">
             <div class="flex justify-between items-center pb-2 border-b border-slate-100">
-              <div class="flex items-center space-x-1.5">
+              <div class="flex items-center space-x-2">
+                <!-- 批量選取核取方塊 -->
+                <input v-if="isBatchSelectMode" type="checkbox" :checked="selectedRecordIds.includes(item.id)" @click.stop="toggleRecordSelection(item.id)" class="w-4 h-4 accent-rose-600 rounded cursor-pointer">
                 <span class="text-xs font-extrabold text-slate-900">🧸 {{ item.student_name }}</span>
                 <span class="text-[11px] text-slate-500">📅 {{ item.observation_date }}</span>
               </div>
-              <div class="flex items-center space-x-2">
+              <div v-if="!isBatchSelectMode" class="flex items-center space-x-2">
                 <button @click="toggleSearchEditMode(item)" class="text-xs font-bold text-indigo-700 hover:underline">
                   {{ item.isEditingSearch ? '取消' : '✏️ 校正' }}
                 </button>
@@ -405,8 +435,8 @@
               </div>
             </div>
 
-            <!-- 翻紀錄專屬編輯模式（支援同時校正潤飾文字、輔導策略、原始速記） -->
-            <div v-if="item.isEditingSearch" class="space-y-2.5 pt-1">
+            <!-- 翻紀錄專屬編輯模式 -->
+            <div v-if="item.isEditingSearch && !isBatchSelectMode" class="space-y-2.5 pt-1">
               <div>
                 <label class="block text-[10px] font-bold text-teal-800 mb-1">✨ 潤飾後的客觀行為紀錄</label>
                 <textarea v-model="item.editBuffer" rows="5" class="w-full text-xs p-2.5 rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed custom-scrollbar font-medium text-slate-800"></textarea>
@@ -534,6 +564,71 @@
       </button>
     </nav>
 
+    <!-- ================= 2階段確認批量刪除彈窗 ================= -->
+    <div v-if="deleteModalStep > 0" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+        <!-- 彈窗標題列 -->
+        <div class="px-4 py-3 border-b flex items-center justify-between" :class="deleteModalStep === 1 ? 'bg-amber-50 border-amber-200' : 'bg-rose-600 text-white border-rose-700'">
+          <div class="flex items-center space-x-2">
+            <span class="text-base">{{ deleteModalStep === 1 ? '⚠️' : '🚨' }}</span>
+            <h3 class="text-xs font-extrabold tracking-wide">
+              {{ deleteModalStep === 1 ? '批量刪除確認（第 1 階段 / 共 2 階段）' : '最終永久刪除確認（第 2 階段 / 共 2 階段）' }}
+            </h3>
+          </div>
+          <button @click="closeDeleteModal" class="text-xs font-bold opacity-80 hover:opacity-100 px-1.5">✕</button>
+        </div>
+
+        <!-- 第 1 階段內容：檢視預計刪除的學生與日期明細 -->
+        <div v-if="deleteModalStep === 1" class="p-4 space-y-3">
+          <p class="text-xs text-slate-700 font-bold">
+            您即將刪除以下 <span class="text-rose-600 font-extrabold text-sm">{{ selectedRecordsPreview.length }}</span> 筆觀察紀錄，請先核對明細：
+          </p>
+
+          <div class="max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 rounded-xl border border-slate-200 p-2.5 space-y-1.5">
+            <div v-for="rec in selectedRecordsPreview" :key="rec.id" class="flex items-center justify-between text-xs bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80">
+              <span class="font-extrabold text-slate-800">🧸 {{ rec.student_name }}</span>
+              <span class="text-[11px] text-slate-500 font-mono">📅 {{ rec.observation_date }}</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button @click="closeDeleteModal" class="py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+              取消返回
+            </button>
+            <button @click="proceedToDeleteStep2" class="py-2.5 text-xs font-extrabold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-sm transition">
+              確認無誤，下一步 ➔
+            </button>
+          </div>
+        </div>
+
+        <!-- 第 2 階段內容：勾選不可復原聲明後解鎖刪除 -->
+        <div v-else-if="deleteModalStep === 2" class="p-4 space-y-3.5">
+          <div class="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-900 space-y-1">
+            <p class="font-extrabold">⚠️ 警告：資料刪除後將無法復原！</p>
+            <p class="text-[11px] leading-relaxed">
+              系統將會從<strong>本機手機</strong>與 <strong>Supabase 雲端資料庫</strong>同步永久移除這 <strong>{{ selectedRecordsPreview.length }}</strong> 筆紀錄（包含原始速記、潤飾文字與輔導策略）。
+            </p>
+          </div>
+
+          <label class="flex items-start space-x-2.5 p-2.5 rounded-xl border border-slate-300 bg-slate-50 cursor-pointer select-none">
+            <input v-model="deleteFinalAckChecked" type="checkbox" class="mt-0.5 w-4 h-4 accent-rose-600 rounded">
+            <span class="text-xs font-bold text-slate-800 leading-snug">
+              我已確認名單與日期無誤，並了解刪除後資料無法復原。
+            </span>
+          </label>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button @click="closeDeleteModal" :disabled="isDeletingBatch" class="py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+              取消保留資料
+            </button>
+            <button @click="executeBatchDelete" :disabled="!deleteFinalAckChecked || isDeletingBatch" class="py-2.5 text-xs font-extrabold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition disabled:opacity-40">
+              {{ isDeletingBatch ? '刪除中...' : `永久刪除 (${selectedRecordsPreview.length} 筆)` }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 浮動提示 Toast -->
     <div v-if="toastMessage" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs px-4 py-2 rounded-full shadow-lg transition font-bold flex items-center space-x-1 whitespace-nowrap">
       <span>🍬</span>
@@ -590,7 +685,8 @@
         const activeTab = ref('input');
         const records = ref([]);
         const searchKeyword = ref('');
-        const searchDate = ref('');
+        const searchStartDate = ref('');
+        const searchEndDate = ref('');
         const selectedStudentFilter = ref('');
         const isAiProcessing = ref(false);
         const isTestingConnection = ref(false);
@@ -599,6 +695,13 @@
         const toastMessage = ref('');
         const activeStatusText = ref('');
         const autoSaveTimeText = ref('');
+
+        // 批量刪除與2階段確認狀態
+        const isBatchSelectMode = ref(false);
+        const selectedRecordIds = ref([]);
+        const deleteModalStep = ref(0); // 0: 關閉, 1: 第1階段核對名單, 2: 第2階段不可復原確認
+        const deleteFinalAckChecked = ref(false);
+        const isDeletingBatch = ref(false);
 
         const groqKey = ref(localStorage.getItem('groq_api_key') || '');
         const groqKey2 = ref(localStorage.getItem('groq_api_key_2') || '');
@@ -736,7 +839,7 @@
           if (existingIndex !== -1) {
             const oldRecord = records.value[existingIndex];
             newRecord.id = oldRecord.id;
-            if (!newRecord.original_record && oldRecord.original_record && newRecord.original_record !== '') {
+            if (newRecord.original_record === undefined && oldRecord.original_record) {
               newRecord.original_record = oldRecord.original_record;
             }
             records.value[existingIndex] = { ...newRecord };
@@ -798,7 +901,7 @@
           return sortRecordsByDateDesc([...list]);
         });
 
-        // 翻紀錄複合檢索：支援「幼兒姓名、客觀行為紀錄、班級與家庭輔導策略、原始速記」及「日期」
+        // 翻紀錄複合檢索：支援關鍵字（姓名、潤飾、策略、原始速記） ＋ 日期區間（起始日 ～ 結束日）
         const searchedRecords = computed(() => {
           let list = [...records.value];
           if (searchKeyword.value) {
@@ -810,11 +913,103 @@
               (r.original_record && r.original_record.toLowerCase().includes(kw))
             );
           }
-          if (searchDate.value) {
-            list = list.filter(r => r.observation_date === searchDate.value);
+          if (searchStartDate.value) {
+            list = list.filter(r => r.observation_date && r.observation_date >= searchStartDate.value);
+          }
+          if (searchEndDate.value) {
+            list = list.filter(r => r.observation_date && r.observation_date <= searchEndDate.value);
           }
           return sortRecordsByDateDesc(list);
         });
+
+        const clearDateRange = () => {
+          searchStartDate.value = '';
+          searchEndDate.value = '';
+        };
+
+        // 批量選取與2階段刪除相關邏輯
+        const toggleBatchSelectMode = () => {
+          isBatchSelectMode.value = !isBatchSelectMode.value;
+          selectedRecordIds.value = [];
+        };
+
+        const toggleRecordSelection = (id) => {
+          const idx = selectedRecordIds.value.indexOf(id);
+          if (idx === -1) {
+            selectedRecordIds.value.push(id);
+          } else {
+            selectedRecordIds.value.splice(idx, 1);
+          }
+        };
+
+        const isAllFilteredSelected = computed(() => {
+          if (searchedRecords.value.length === 0) return false;
+          return searchedRecords.value.every(r => selectedRecordIds.value.includes(r.id));
+        });
+
+        const toggleSelectAllFiltered = () => {
+          if (isAllFilteredSelected.value) {
+            selectedRecordIds.value = [];
+          } else {
+            selectedRecordIds.value = searchedRecords.value.map(r => r.id);
+          }
+        };
+
+        const selectedRecordsPreview = computed(() => {
+          return sortRecordsByDateDesc(
+            records.value.filter(r => selectedRecordIds.value.includes(r.id))
+          );
+        });
+
+        const openTwoStageDeleteModal = () => {
+          if (selectedRecordIds.value.length === 0) return;
+          deleteFinalAckChecked.value = false;
+          deleteModalStep.value = 1;
+        };
+
+        const proceedToDeleteStep2 = () => {
+          deleteFinalAckChecked.value = false;
+          deleteModalStep.value = 2;
+        };
+
+        const closeDeleteModal = () => {
+          if (isDeletingBatch.value) return;
+          deleteModalStep.value = 0;
+          deleteFinalAckChecked.value = false;
+        };
+
+        const executeBatchDelete = async () => {
+          if (!deleteFinalAckChecked.value || selectedRecordIds.value.length === 0) return;
+          isDeletingBatch.value = true;
+          const idsToRemove = [...selectedRecordIds.value];
+          const count = idsToRemove.length;
+
+          try {
+            if (storageMode.value === 'supabase' && supabaseClient) {
+              const { error } = await supabaseClient
+                .from('special_ed_observations')
+                .delete()
+                .in('id', idsToRemove);
+              if (error) throw new Error(error.message);
+            }
+
+            records.value = sortRecordsByDateDesc(
+              records.value.filter(r => !idsToRemove.includes(r.id))
+            );
+            localStorage.setItem('special_ed_records', JSON.stringify(records.value));
+
+            selectedRecordIds.value = [];
+            isBatchSelectMode.value = false;
+            deleteModalStep.value = 0;
+            deleteFinalAckChecked.value = false;
+            initStudentFilter();
+            showToast(`✓ 已永久刪除 ${count} 筆觀察紀錄`);
+          } catch (err) {
+            alert('批量刪除失敗：' + err.message);
+          } finally {
+            isDeletingBatch.value = false;
+          }
+        };
 
         const getUnifiedRecord = (item) => {
           const mainText = item.refined_record || item.original_record || '';
@@ -908,8 +1103,11 @@
 
         const exportAllSearchCsv = () => {
           if (searchedRecords.value.length === 0) return alert('目前查無資料可匯出');
-          const dateSuffix = searchDate.value ? `_${searchDate.value}` : `_${batchDate.value}`;
-          downloadCsvFile(searchedRecords.value, `特教巡輔搜尋清單匯出${dateSuffix}`);
+          const kwLabel = searchKeyword.value ? `_${searchKeyword.value}` : '';
+          const rangeLabel = (searchStartDate.value || searchEndDate.value)
+            ? `_${searchStartDate.value || '起'}_至_${searchEndDate.value || '今'}`
+            : `_${batchDate.value}`;
+          downloadCsvFile(searchedRecords.value, `特教巡輔區間紀錄匯出${kwLabel}${rangeLabel}`);
         };
 
         const insertBatchTemplate = () => {
@@ -1382,7 +1580,23 @@ ${confirmedRecord}
           activeTab,
           records,
           searchKeyword,
-          searchDate,
+          searchStartDate,
+          searchEndDate,
+          clearDateRange,
+          isBatchSelectMode,
+          selectedRecordIds,
+          deleteModalStep,
+          deleteFinalAckChecked,
+          isDeletingBatch,
+          toggleBatchSelectMode,
+          toggleRecordSelection,
+          isAllFilteredSelected,
+          toggleSelectAllFiltered,
+          selectedRecordsPreview,
+          openTwoStageDeleteModal,
+          proceedToDeleteStep2,
+          closeDeleteModal,
+          executeBatchDelete,
           selectedStudentFilter,
           uniqueStudentNames,
           currentStudentRecords,
