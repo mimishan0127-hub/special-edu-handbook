@@ -1,0 +1,30 @@
+name: Keep Supabase Projects Alive
+
+on:
+  schedule:
+    # 每 3 天的台灣時間早上 09:00 自動執行（遠低於 7 天休眠限制）
+    - cron: '0 1 */3 * *'
+  workflow_dispatch: # 允許隨時在 GitHub 網頁手動點擊測試
+
+jobs:
+  wake-up-databases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. 喚醒【幼兒特教巡輔】資料庫
+        run: |
+          STATUS=$(curl -s -o /tmp/res.txt -w "%{http_code}" \
+            -H "apikey: sb_publishable_VlBjIcKGyLdoRRGqIuEg0g_X0l7vNHS" \
+            "https://tsgwckohyraddqrwmgkk.supabase.co/rest/v1/")
+          echo "專案 1 回應狀態碼: $STATUS"
+          if [ "$STATUS" -ge 400 ]; then cat /tmp/res.txt; exit 1; fi
+
+      # ==========================================
+      # 若有第 2 個 Supabase App，把下方 7 行的 # 刪掉並填入網址與 Key 即可
+      # ==========================================
+      # - name: 2. 喚醒【我的第二個 App】資料庫
+      #   run: |
+      #     STATUS=$(curl -s -o /tmp/res2.txt -w "%{http_code}" \
+      #       -H "apikey: 填入第二個專案的_publishable_或_anon_key" \
+      #       "https://填入第二個專案的ID.supabase.co/rest/v1/")
+      #     echo "專案 2 回應狀態碼: $STATUS"
+      #     if [ "$STATUS" -ge 400 ]; then cat /tmp/res2.txt; exit 1; fi
