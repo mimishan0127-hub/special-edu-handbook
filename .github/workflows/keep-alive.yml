@@ -10,10 +10,10 @@ jobs:
   wake-up-databases:
     runs-on: ubuntu-latest
     steps:
-      - name: 喚醒 Supabase 資料庫
+      - name: 喚醒【幼兒特教巡迴輔導觀察紀錄資料表】資料庫
         run: |
           STATUS=$(curl -s -o /tmp/res.txt -w "%{http_code}" \
             -H "apikey: sb_publishable_VlBjIcKGyLdoRRGqIuEg0g_X0l7vNHS" \
-            "https://tsgwckohyraddqrwmgkk.supabase.co/rest/v1/")
+            "https://tsgwckohyraddqrwmgkk.supabase.co/rest/v1/special_ed_observations?select=id&limit=1")
           echo "Supabase 回應狀態碼: $STATUS"
           if [ "$STATUS" -ge 400 ]; then cat /tmp/res.txt; exit 1; fi
